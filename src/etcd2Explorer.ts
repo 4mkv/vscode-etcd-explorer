@@ -1,19 +1,16 @@
 import * as vscode from 'vscode';
-import { stringify } from 'querystring';
-import { EtcdNodeList, EtcdExplorerBase, EtcdNode, EtcdSpecialNode } from "./etcdExplorer"
-var HashMap = require('hashmap');
-
-var etcd_host = '172.18.2.219:2379';
-var separator = "/";
-var max_keys = 100;
-var schema = "etcd2_value_text_schema"
+import { EtcdExplorerBase, EtcdNode, EtcdSpecialNode } from "./etcdExplorer"
 const Etcd2 = require('node-etcd');
-const client = new Etcd2([etcd_host]);
+
+var separator = "/";
+var schema = "etcd2_value_text_schema"
 
 export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
+  private client: any;
 
   constructor() {
     super(schema);
+    this.client = new Etcd2([this.etcd_host]);
     this.initLevelData(separator, this.RootNode());
     console.log("Done .. nodes");
   }
@@ -26,7 +23,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
   }
 
   deleteKeys(prefix: string) {
-    client.del(prefix, { recursive: true }, console.log);
+    this.client.del(prefix, { recursive: true }, console.log);
   }
 
   initLevelData(prefix: string, node: EtcdNode) {
@@ -37,7 +34,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     var isLeaf = false;
     console.log("initTreeData");
     //const promise_keys = client.getAll().prefix(prefix).strings();
-    const keys = client.get(prefix, { recursive: true },
+    this.client.get(prefix, { recursive: true },
       (key: any, val: any) => {
         console.log(Object.prototype.toString.call(val));
         //console.log(Object.prototype.toString.call(key));
@@ -59,7 +56,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
           }
           nodeList.updatingNodes = false;
           count++;
-          if (count >= (max_keys * nodeList.pageCount)) {
+          if (count >= (this.max_keys * nodeList.pageCount)) {
             nodeList.pushNode(new EtcdSpecialNode(prefix, this, node));
             break;
           }

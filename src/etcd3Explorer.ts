@@ -1,19 +1,16 @@
 import * as vscode from 'vscode';
-import { EtcdNodeList, EtcdExplorerBase, EtcdNode, EtcdSpecialNode } from "./etcdExplorer"
+import { EtcdExplorerBase, EtcdNode, EtcdSpecialNode } from "./etcdExplorer"
 
-var HashMap = require('hashmap');
-
-var etcd_host = '172.18.2.219:2379';
 var separator = "/";
-var max_keys = 20;
 var schema = "etcd3_value_text_schema"
 const { Etcd3 } = require('etcd3');
-const client = new Etcd3({ hosts: etcd_host, grpcOptions: { "grpc.max_receive_message_length": -1, }, });
 
 export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
+  private client: any;
 
   constructor() {
     super(schema)
+    this.client = new Etcd3({ hosts: this.etcd_host, grpcOptions: { "grpc.max_receive_message_length": -1, }, });
     this.initLevelData(separator, this.RootNode());
     console.log("Done .. nodes");
   }
@@ -26,7 +23,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
   }
 
   async deleteKeys(prefix: string) {
-    const ns = client.namespace(prefix);
+    const ns = this.client.namespace(prefix);
     await ns.delete().all(); // deletes all keys with the prefix
   }
 
@@ -37,7 +34,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     nodeList.updatingNodes = true;
     var isLeaf = false;
     console.log("initTreeData");
-    const promise_keys = client.getAll().prefix(prefix).strings();
+    const promise_keys = this.client.getAll().prefix(prefix).strings();
     console.log("initTreeData => getAll");
     promise_keys.then((val: any) => {
       console.log("initTreeData => values");
@@ -69,7 +66,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
               console.log("key:" + keyw);
               nodeList.updatingNodes = false;
               count++;
-              if (count >= (max_keys * nodeList.pageCount)) {
+              if (count >= (this.max_keys * nodeList.pageCount)) {
                 nodeList.pushNode(new EtcdSpecialNode(prefix, this, node));
                 break;
               }

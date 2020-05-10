@@ -16,6 +16,21 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "EtcdManager",
+      "properties": {
+        "etcd-manager.etcd_host": {
+          "type": "string",
+          "default": "",
+          "description": "hostname or ip address of etcd host and port [host:port]"
+        },
+        "etcd-manager.max_keys_per_level": {
+          "type": "number",
+          "default": 20,
+          "description": "Max number of items to show per level"
+        }
+      }
+    },
     "commands": [
       {
         "command": "etcd3view.refreshEntry",
