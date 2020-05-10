@@ -6,10 +6,17 @@ var separator = "/";
 var schema = "etcd2_value_text_schema"
 
 export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
-  private client: any;
 
   constructor() {
     super(schema);
+    this.initClient();
+  }
+
+  initClient() {
+    super.initClient();
+    if (!this.etcd_host) {
+      return;
+    }
     this.client = new Etcd2([this.etcd_host]);
     this.initLevelData(separator, this.RootNode());
     console.log("Done .. nodes");
@@ -35,7 +42,13 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     console.log("initTreeData");
     //const promise_keys = client.getAll().prefix(prefix).strings();
     this.client.get(prefix, { recursive: true },
-      (key: any, val: any) => {
+      (err: any, val: any) => {
+        if (val === undefined) {
+          console.log(require('util').inspect(err, true, 10));
+          vscode.window.showErrorMessage(err.toString());
+          nodeList.updatingNodes = false;
+          return;
+        }
         console.log(Object.prototype.toString.call(val));
         //console.log(Object.prototype.toString.call(key));
         var root = val.node;

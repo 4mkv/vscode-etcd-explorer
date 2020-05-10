@@ -6,10 +6,16 @@ var schema = "etcd3_value_text_schema"
 const { Etcd3 } = require('etcd3');
 
 export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
-  private client: any;
-
   constructor() {
     super(schema)
+    this.initClient();
+  }
+
+  initClient() {
+    super.initClient();
+    if (!this.etcd_host) {
+      return;
+    }
     this.client = new Etcd3({ hosts: this.etcd_host, grpcOptions: { "grpc.max_receive_message_length": -1, }, });
     this.initLevelData(separator, this.RootNode());
     console.log("Done .. nodes");
@@ -76,7 +82,11 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
       }
       nodeList.updatingNodes = false;
       console.log("initTreeData => upDating done");
-    }, (error: string) => { console.log(error); nodeList.updatingNodes = false; });
+    }, (error: string) => {
+      console.log(error);
+      vscode.window.showErrorMessage(error.toString());
+      nodeList.updatingNodes = false;
+    });
   }
 
 }

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Etcd2Explorer } from './etcd2Explorer';
 var HashMap = require('hashmap');
 
 var separator = "/";
@@ -9,6 +10,7 @@ export class EtcdExplorerBase {
   private rootNode: EtcdRootNode;
   protected etcd_host: string;
   protected max_keys: number;
+  protected client: any;
 
   constructor(schema: string) {
     console.log("Constructing ETCD Explorer");
@@ -48,11 +50,11 @@ export class EtcdExplorerBase {
     if (this.rootNode.getChildren(true).updatingNodes) {
       console.log("getChildren => " + this.rootNode.getChildren().updatingStr);
       this.updatingTreeData();
-      return Promise.resolve([new EtcdNode(this.rootNode.getChildren().updatingStr, "", this, this.rootNode, true)]);
+      return Promise.resolve([new EtcdUpdatingNode(this, this.rootNode)]);
     }
     if (this.rootNode.getChildren(true).toArray().length == 0) {
       console.log("getChildren Empty WS");
-      return Promise.resolve([new EtcdNode("Empty Workspace", "", this, this.rootNode, true)]);
+      return Promise.resolve([new EtcdEmptyWSNode(this, this.rootNode)]);
     }
     console.log("getChildren node " + element.label + " => " + element.getChildren().toArray().length);
     if (element.getChildren(true).updatingNodes)
@@ -78,7 +80,18 @@ export class EtcdExplorerBase {
     this._onDidChangeTreeData.fire();
   }
 
+  initClient() {
+    var conf = vscode.workspace.getConfiguration('etcd-manager');
+    this.max_keys = conf.max_keys_per_level;
+    this.etcd_host = conf.etcd_host;
+  }
+
   refreshData() {
+    // read the configuration again
+    this.initClient();
+    if (this.client === undefined) {
+      return;
+    }
     //this.rootNodeList = new Etcd3NodeList();
     this.initLevelData(separator, this.rootNode);
 
@@ -201,8 +214,25 @@ export class EtcdRootNode extends EtcdNode {
 }
 
 export class EtcdSpecialNode extends EtcdNode {
-  constructor(parent_prefix: string, etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
-    super("More nodes >>>", parent_prefix + "more_nodes>>>", etcd_explorer, parent, true);
+  constructor(parent_prefix: string, etcd_explorer: EtcdExplorerBase, parent: EtcdNode, nodeLabel?: string, nodePrefix?: string) {
+    super(nodeLabel ? nodeLabel : "More nodes >>>",
+      parent_prefix + (nodePrefix ? nodePrefix : "more_nodes>>>"),
+      etcd_explorer,
+      parent,
+      true
+    );
+  }
+}
+
+export class EtcdEmptyWSNode extends EtcdSpecialNode {
+  constructor(etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
+    super("/", etcd_explorer, parent, "Empty Workspace", ">>>empty_workspace<<<");
+  }
+}
+
+export class EtcdUpdatingNode extends EtcdSpecialNode {
+  constructor(etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
+    super("/", etcd_explorer, parent, parent.getChildren().updatingStr, ">>>updating<<<");
   }
 }
 
@@ -216,6 +246,7 @@ export class EtcdNodeList {
     this.updatingNodes = false;
     this.explorer = etcd_explorer;
     this.nodes = new Array<EtcdNode>();
+    this.updatingStr = "Updating" + etcd_explorer.schema();
   }
 
   removeNode(node?: EtcdNode) {
