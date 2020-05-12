@@ -22,7 +22,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
   }
 
   getTreeItem(element: EtcdNode): vscode.TreeItem {
-    if (element.isLeafNode() && !(element instanceof EtcdSpecialNode)) {
+    if (element.isLeafNode()) {
       element.command = { command: 'etcd3view.showvalue', title: "Show Value", arguments: [element], };
     }
     return element;
