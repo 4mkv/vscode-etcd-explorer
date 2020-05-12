@@ -26,8 +26,8 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand('etcd2view.deleteEntry', (node: EtcdNode) => etcd2Explorer.deleteResource(node));
   vscode.commands.registerCommand('etcd3view.deleteEntry', (node: EtcdNode) => etcd3Explorer.deleteResource(node));
   vscode.workspace.onDidChangeConfiguration(e => {
-    if (e.affectsConfiguration('etcd-manager.etcd_host')) {
-      console.log("etcd-manager.etcd_host changed");
+    if (e.affectsConfiguration('etcd-explorer.etcd_host')) {
+      console.log("etcd-explorer.etcd_host changed");
       etcd3Explorer.refreshData();
       etcd2Explorer.refreshData();
     }

@@ -15,7 +15,7 @@ export class EtcdExplorerBase {
   constructor(schema: string) {
     console.log("Constructing ETCD Explorer");
     this.etcdSch = schema;
-    var conf = vscode.workspace.getConfiguration('etcd-manager');
+    var conf = vscode.workspace.getConfiguration('etcd-explorer');
     this.max_keys = conf.max_keys_per_level;
     this.etcd_host = conf.etcd_host;
     this.rootNode = new EtcdRootNode(this);
@@ -81,7 +81,7 @@ export class EtcdExplorerBase {
   }
 
   initClient() {
-    var conf = vscode.workspace.getConfiguration('etcd-manager');
+    var conf = vscode.workspace.getConfiguration('etcd-explorer');
     this.max_keys = conf.max_keys_per_level;
     this.etcd_host = conf.etcd_host;
   }

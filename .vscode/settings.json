@@ -8,5 +8,5 @@
     },
     // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
     "typescript.tsc.autoDetect": "off",
-    "etcd-manager.etcd_host": "172.18.2.219:2379"
+    "etcd-explorer.etcd_host": "172.18.2.219:2379"
 }
