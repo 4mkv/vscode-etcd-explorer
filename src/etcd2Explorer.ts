@@ -20,6 +20,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     this.client = new Etcd2([this.etcd_host]);
     this.initLevelData(separator, this.RootNode());
     console.log("Done .. nodes");
+    this.client.selfStats(console.log);
   }
 
   getTreeItem(element: EtcdNode): vscode.TreeItem {

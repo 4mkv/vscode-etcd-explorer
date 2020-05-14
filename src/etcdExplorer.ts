@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { Etcd2Explorer } from './etcd2Explorer';
-var HashMap = require('hashmap');
 
 var separator = "/";
 

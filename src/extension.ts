@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
+import { EtcdCluster } from './etcdCluster';
 import { Etcd3Explorer } from './etcd3Explorer';
 import { Etcd2Explorer } from './etcd2Explorer';
 import { EtcdExplorerBase, EtcdNode } from './etcdExplorer';
@@ -11,16 +12,19 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("Initializing etcd-explorer");
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
+  const etcdCluster = new EtcdCluster();
   const etcd3Explorer = new Etcd3Explorer();
   const etcd2Explorer = new Etcd2Explorer();
   const etcd2ValueProvider = new etcdTextValueProvider(etcd2Explorer);
   const etcd3ValueProvider = new etcdTextValueProvider(etcd3Explorer);
   vscode.workspace.registerTextDocumentContentProvider(etcd2Explorer.schema(), etcd2ValueProvider);
   vscode.workspace.registerTextDocumentContentProvider(etcd3Explorer.schema(), etcd3ValueProvider);
+  vscode.window.registerTreeDataProvider('etcdclusterview', etcdCluster);
   vscode.window.registerTreeDataProvider('etcd3view', etcd3Explorer);
   vscode.window.registerTreeDataProvider('etcd2view', etcd2Explorer);
   vscode.commands.registerCommand('etcd2view.refreshEntry', () => etcd2Explorer.refreshData());
   vscode.commands.registerCommand('etcd3view.refreshEntry', () => etcd3Explorer.refreshData());
+  vscode.commands.registerCommand('etcdclusterview.refreshEntry', () => etcdCluster.refreshData());
   vscode.commands.registerCommand('etcd2view.showvalue', (resource: EtcdNode) => etcd2Explorer.openResource(resource));
   vscode.commands.registerCommand('etcd3view.showvalue', (resource: EtcdNode) => etcd3Explorer.openResource(resource));
   vscode.commands.registerCommand('etcd2view.deleteEntry', (node: EtcdNode) => etcd2Explorer.deleteResource(node));
@@ -28,6 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidChangeConfiguration(e => {
     if (e.affectsConfiguration('etcd-explorer.etcd_host')) {
       console.log("etcd-explorer.etcd_host changed");
+      etcdCluster.refreshData();
       etcd3Explorer.refreshData();
       etcd2Explorer.refreshData();
     }

@@ -17,7 +17,8 @@
   ],
   "activationEvents": [
     "onView:etcd3view",
-    "onView:etcd2view"
+    "onView:etcd2view",
+    "onView:etcdclusterview"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -37,6 +38,14 @@
       }
     },
     "commands": [
+      {
+        "command": "etcdclusterview.refreshEntry",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
       {
         "command": "etcd3view.refreshEntry",
         "title": "Refresh",
@@ -64,6 +73,11 @@
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "etcdclusterview.refreshEntry",
+          "when": "view == etcdclusterview",
+          "group": "navigation"
+        },
         {
           "command": "etcd3view.refreshEntry",
           "when": "view == etcd3view",
@@ -97,6 +111,10 @@
     },
     "views": {
       "etcd-explorer": [
+        {
+          "id": "etcdclusterview",
+          "name": "ETCD CLUSTER"
+        },
         {
           "id": "etcd3view",
           "name": "ETCD3 EXPLORER"
