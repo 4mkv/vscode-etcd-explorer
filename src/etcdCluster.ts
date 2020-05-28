@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+
 const Etcd2 = require('node-etcd');
 
 export class EtcdCluster {
@@ -23,11 +25,7 @@ export class EtcdCluster {
 
   getChildren(element?: EtcdClusterMember): Thenable<EtcdClusterMember[]> {
     if (this.updatingMembers || this.refreshMembers) {
-      var self = this;
-      setTimeout(function () {
-        self.refresh();
-      }, 300);
-      return Promise.resolve([new EtcdClusterMember("Updating ...")]);
+      return Promise.resolve([new EtcdUpdatingMemberNode()]);
     }
     console.log("getChildren  => " + this.members.length);
     return Promise.resolve(this.members);
@@ -37,14 +35,20 @@ export class EtcdCluster {
     this.updatingMembers = true;
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
     this.etcd_host = conf.etcd_host;
-    if (!this.etcd_host)
+    var self = this;
+    if (!this.etcd_host) {
+      self.refresh();
       return;
+    }
     this.client = new Etcd2([this.etcd_host]);
+    console.log("Self Stats");
+    this.client.selfStats(console.log);
     this.client.raw("GET", "v2/members", null, {}, (err: any, val: any) => {
       if (val === undefined) {
         console.log(require('util').inspect(err, true, 10));
         vscode.window.showErrorMessage(err.toString());
         this.updatingMembers = false;
+        self.refresh();
         return;
       }
       for (var member of val.members) {
@@ -54,6 +58,7 @@ export class EtcdCluster {
       }
       this.updatingMembers = false;
       this.refreshMembers = false;
+      self.refresh();
     });
   }
 
@@ -82,9 +87,24 @@ export class EtcdCluster {
 
 export class EtcdClusterMember extends vscode.TreeItem {
   constructor(
-    public readonly label: string,
+    public readonly label: string
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
   }
+
+  iconPath = {
+    light: path.join(__filename, '..', '..', 'resources', 'light', 'server_connected.svg'),
+    dark: path.join(__filename, '..', '..', 'resources', 'dark', 'server_connected.svg')
+  };
 }
 
+export class EtcdUpdatingMemberNode extends EtcdClusterMember {
+  constructor() {
+    super("Updating");
+  }
+  iconPath = {
+    light: path.join(__filename, '..', '..', 'resources', 'loading.gif'),
+    dark: path.join(__filename, '..', '..', 'resources', 'loading.gif')
+  };
+
+}

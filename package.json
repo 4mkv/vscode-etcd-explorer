@@ -2,7 +2,7 @@
   "name": "etcd-explorer",
   "displayName": "etcd-explorer",
   "description": "",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "publisher": "mkv",
   "icon": "resources/etcd.png",
   "repository": {
@@ -32,8 +32,8 @@
         },
         "etcd-explorer.max_keys_per_level": {
           "type": "number",
-          "default": 20,
-          "description": "Max number of items to show per level"
+          "default": 25,
+          "description": "Max number of items to show per page per level. set to -1 to show all items.(etcd v3 only)"
         }
       }
     },
@@ -63,8 +63,16 @@
         }
       },
       {
+        "command": "etcd3view.toJSON",
+        "title": "Export To JSON"
+      },
+      {
         "command": "etcd3view.deleteEntry",
         "title": "Delete"
+      },
+      {
+        "command": "etcd2view.toJSON",
+        "title": "Export To JSON"
       },
       {
         "command": "etcd2view.deleteEntry",
@@ -91,12 +99,20 @@
       ],
       "view/item/context": [
         {
+          "command": "etcd3view.toJSON",
+          "when": "view == etcd3view && viewItem == etcdnode"
+        },
+        {
           "command": "etcd3view.deleteEntry",
-          "when": "view == etcd3view"
+          "when": "view == etcd3view && viewItem == etcdnode"
+        },
+        {
+          "command": "etcd2view.toJSON",
+          "when": "view == etcd2view && viewItem == etcdnode"
         },
         {
           "command": "etcd2view.deleteEntry",
-          "when": "view == etcd2view"
+          "when": "view == etcd2view && viewItem == etcdnode"
         }
       ]
     },

@@ -2,8 +2,8 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+## Etcd Explorer 0.0.4
+- Explore etcd v2 and etcd v3 in explorer tree
+- view values for keys in editor
+- export keys as JSON
+- delete keys 

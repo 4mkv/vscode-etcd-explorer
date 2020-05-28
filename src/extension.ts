@@ -29,6 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand('etcd3view.showvalue', (resource: EtcdNode) => etcd3Explorer.openResource(resource));
   vscode.commands.registerCommand('etcd2view.deleteEntry', (node: EtcdNode) => etcd2Explorer.deleteResource(node));
   vscode.commands.registerCommand('etcd3view.deleteEntry', (node: EtcdNode) => etcd3Explorer.deleteResource(node));
+  vscode.commands.registerCommand('etcd3view.toJSON', (node: EtcdNode) => etcd3Explorer.exportResource(node));
+  vscode.commands.registerCommand('etcd2view.toJSON', (node: EtcdNode) => etcd2Explorer.exportResource(node));
   vscode.workspace.onDidChangeConfiguration(e => {
     if (e.affectsConfiguration('etcd-explorer.etcd_host')) {
       console.log("etcd-explorer.etcd_host changed");
