@@ -2,6 +2,9 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
+## Etcd Explorer 0.1.1
+- Added License file
+
 ## Etcd Explorer 0.1.0
 - Code simplified and optimized
 - Loads faster. No longer need for pagination, so configuration for Max number of items to show per page is removed.
