@@ -58,7 +58,16 @@ export class EtcdExplorerBase {
       var isLeaf = false;
       var key = entry[0];
       var value = entry[1];
-      if (typeof (value) == "string") {
+      var str = Object.prototype.toString.call(value);
+      var type = str.slice(8, -1).toLowerCase();
+      if (type == "string"
+        || type == "boolean"
+        || type == "number"
+        || type == "date"
+        || type == "array"
+        || type == "undefined"
+        || type == "null"
+      ) {
         isLeaf = true;
       }
       else {
