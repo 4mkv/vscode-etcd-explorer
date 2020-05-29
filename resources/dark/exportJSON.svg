@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+  <style>.icon-canvas-transparent{opacity:0;fill:#2d2d30}.icon-vs-out{fill:#2d2d30}.icon-vs-bg{fill:#c5c5c5}.icon-vs-fg{fill:#2b282e}</style>
+  <path class="icon-canvas-transparent" d="M16 16h-16v-16h16v16z" id="canvas" />
+  <path class="icon-vs-fg" d="M10,6V0H0V16H10V10H6V12H4V4H6V6z" id="iconFg" />
+  <path class="icon-vs-bg" d="M9,5V1H1V15H9V11H7V13H3V3H7V5z" id="iconBg" />
+  <path class="icon-vs-fg" d="M4,6H10V0L16,8L10,16V10H4z" id="iconArFg" />
+  <path class="icon-vs-bg" d="M5,7H11V3L15,8L11,13V9H5z" id="iconArBg" />
+</svg>

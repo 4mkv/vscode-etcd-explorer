@@ -157,7 +157,8 @@ export class EtcdExplorerBase {
 
   initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) { }
 
-  async exportResource(node: EtcdNode) {
+  async exportResource(nodeResource?: EtcdNode) {
+    var node = (nodeResource != undefined) ? nodeResource : this.RootNode();
     if (node instanceof EtcdSpecialNode) {
       return;
     }

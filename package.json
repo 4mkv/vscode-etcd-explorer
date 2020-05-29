@@ -59,7 +59,11 @@
       },
       {
         "command": "etcd3view.toJSON",
-        "title": "Export To JSON"
+        "title": "Export To JSON",
+        "icon": {
+          "light": "resources/light/exportJSON.svg",
+          "dark": "resources/dark/exportJSON.svg"
+        }
       },
       {
         "command": "etcd3view.deleteEntry",
@@ -67,7 +71,11 @@
       },
       {
         "command": "etcd2view.toJSON",
-        "title": "Export To JSON"
+        "title": "Export To JSON",
+        "icon": {
+          "light": "resources/light/exportJSON.svg",
+          "dark": "resources/dark/exportJSON.svg"
+        }
       },
       {
         "command": "etcd2view.deleteEntry",
@@ -87,7 +95,17 @@
           "group": "navigation"
         },
         {
+          "command": "etcd3view.toJSON",
+          "when": "view == etcd3view",
+          "group": "navigation"
+        },
+        {
           "command": "etcd2view.refreshEntry",
+          "when": "view == etcd2view",
+          "group": "navigation"
+        },
+        {
+          "command": "etcd2view.toJSON",
           "when": "view == etcd2view",
           "group": "navigation"
         }
