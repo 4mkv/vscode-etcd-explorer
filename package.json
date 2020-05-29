@@ -2,7 +2,7 @@
   "name": "etcd-explorer",
   "displayName": "etcd-explorer",
   "description": "",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "publisher": "mkv",
   "icon": "resources/etcd.png",
   "repository": {
@@ -29,11 +29,6 @@
           "type": "string",
           "default": "",
           "description": "hostname or ip address of etcd host and port [host:port]"
-        },
-        "etcd-explorer.max_keys_per_level": {
-          "type": "number",
-          "default": 25,
-          "description": "Max number of items to show per page per level. set to -1 to show all items.(etcd v3 only)"
         }
       }
     },

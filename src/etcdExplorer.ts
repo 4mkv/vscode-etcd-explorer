@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Hash } from 'crypto';
+
+var HashMap = require('hashmap');
 
 var separator = "/";
 
@@ -29,39 +30,63 @@ export class EtcdExplorerBase {
     return this.etcdSch;
   }
 
-  updatingTreeData() {
-    //return new Promise((resolve, reject) => {
-    //this.rootNode.getChildren().updatingStr = "Updating";
-    //console.log(this.rootNode.getChildren().updatingStr);
-    //var self = this;
-    // setTimeout(function () {
-    //  self.refresh();
-    //}, 300);
-    //});
-  }
-
   getChildren(element?: EtcdNode): Thenable<EtcdNode[]> {
     element = element ? element : this.rootNode;
     var children = element.getChildren(true);
     children.removeUpdatingNodes();
     if (children.updatingNodes) {
-      //console.log("getChildren => " + element.getChildren().updatingStr);
-      //this.updatingTreeData();
       var arrayChildren = children.toArray();
       arrayChildren.push(new EtcdUpdatingNode(this, this.rootNode));
       return Promise.resolve(arrayChildren);
     }
     if (this.rootNode.getChildren(true).toArray().length == 0) {
-      //console.log("getChildren Empty WS");
       return Promise.resolve([new EtcdEmptyWSNode(this, this.rootNode)]);
     }
-    //console.log("getChildren node " + element.label + " => " + element.getChildren().toArray().length);
-    //if (element.getChildren(true).updatingNodes)
-    //this.updatingTreeData();
     return Promise.resolve(element.getChildren().toArray());
   }
 
-  initLevelData(node: EtcdNode) {
+  jsonToLevelNodeList(jsonObj: JSON, node: EtcdNode) {
+    var entries = Object.entries(jsonObj);
+
+    var nodeList = node.getChildren();
+    var currentLabels = [];
+    for (var chNode of nodeList.toArray()) {
+      chNode.stale = true;
+      currentLabels.push(chNode.label);
+    }
+    for (var entry of entries) {
+      var isLeaf = false;
+      var key = entry[0];
+      var value = entry[1];
+      if (typeof (value) == "string") {
+        isLeaf = true;
+      }
+      else {
+        isLeaf = false;
+      }
+      if (currentLabels.indexOf(key) > -1) {
+        var existingNode = nodeList.getNode(key);
+        if (existingNode != undefined && existingNode.isLeafNode() == isLeaf) {
+          existingNode.stale = false;
+          continue;
+        }
+        else {
+          nodeList.removeNode(existingNode);
+        }
+      }
+      var prefix = node.prefix + key + ((isLeaf) ? "" : separator);
+      nodeList.pushNode(new EtcdNode(key, prefix, this, node, isLeaf, isLeaf ? value : ""));
+    }
+
+    var removal = []
+    for (chNode of nodeList.toArray()) {
+      if (chNode.stale)
+        removal.push(chNode);
+    }
+    for (var chNode of removal) {
+      nodeList.removeNode(chNode);
+    }
+    nodeList.updatingNodes = false;
   }
 
   refreshAllNodes(nodeList?: EtcdNodeList | undefined) {
@@ -94,7 +119,7 @@ export class EtcdExplorerBase {
     }
     this.rootNode.getChildren().removeSpecialNodes();
     //this.rootNodeList = new Etcd3NodeList();
-    this.initLevelData(this.rootNode);
+    this.initAllData(this.rootNode, this.jsonToLevelNodeList);
 
     // recursivly refresh all nodes
     this.refreshAllNodes();
@@ -121,10 +146,7 @@ export class EtcdExplorerBase {
   deleteKeys(prefix: string) {
   }
 
-  deepInitData(node: EtcdNode, cancelTask: vscode.CancellationToken, progress: vscode.Progress<{
-    message?: string | undefined;
-    increment?: number | undefined;
-  }>) { }
+  initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) { }
 
   async exportResource(node: EtcdNode) {
     if (node instanceof EtcdSpecialNode) {
@@ -139,26 +161,16 @@ export class EtcdExplorerBase {
       progress.report({ message: "loading data for " + node.label + " ..." });
       var count = 0;
       var p = new Promise((resolve, reject) => {
-        this.deepInitData(node, token, progress);
-        var timeout = setInterval(async () => {
-          count++;
-          if (token.isCancellationRequested) {
-            clearInterval(timeout);
-            reject("Task Cancelled");
-          }
-          if (node.getChildren().updatingNodes == false) {
-            clearInterval(timeout);
-            resolve();
-          }
-        }, 500);
+        this.initAllData(node, async (jsonObj: JSON, etcdNode: EtcdNode) => {
+          var str = JSON.stringify(jsonObj);
+          let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
+          vscode.window.showTextDocument(doc, { preview: false });
+          resolve();
+        }, false, true);
       });
       return p;
     });
     promise.then(async () => {
-      var obj = node.nodeJSONObj();
-      var str = JSON.stringify(obj);
-      let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
-      vscode.window.showTextDocument(doc, { preview: false });
     }, (reason) => { console.log(reason); });
   }
 
@@ -212,7 +224,9 @@ export class EtcdNode extends vscode.TreeItem {
   private explorer: EtcdExplorerBase;
   public refreshChildren = true;
   private data?: string;
+  public stale = false;
   public uri: string;
+  public specialKey: string;
   constructor(
     public readonly label: string,
     public readonly prefix: string,
@@ -222,9 +236,10 @@ export class EtcdNode extends vscode.TreeItem {
     value?: string
   ) {
     super(label, leafNode ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed);
+    this.specialKey = label;
     this.isLeaf = leafNode ? leafNode : false;
-    this.children = new EtcdNodeList(etcd_explorer);
-    this.explorer = etcd_explorer;
+    this.explorer = parentNode ? parentNode.explorer : etcd_explorer;
+    this.children = new EtcdNodeList(this.explorer);
     this.uri = prefix;
     this.data = value;
     this.parent = parentNode;
@@ -246,10 +261,15 @@ export class EtcdNode extends vscode.TreeItem {
     return this.data ? this.data : "==>No Value<==";
   }
 
+  setValue(val: string) {
+    this.data = val;
+  }
+
+
   getChildren(refreshCheck?: boolean): EtcdNodeList {
     var refresh = refreshCheck ? refreshCheck : false;
     if (refresh && this.refreshChildren) {
-      this.explorer.initLevelData(this);
+      this.explorer.initAllData(this, this.explorer.jsonToLevelNodeList);
       this.refreshChildren = false;
     }
     return this.children;
@@ -291,18 +311,20 @@ export class EtcdNode extends vscode.TreeItem {
 export class EtcdRootNode extends EtcdNode {
   constructor(etcd_explorer: EtcdExplorerBase) {
     super("Root", separator, etcd_explorer);
+    this.specialKey = separator + this.label;
   }
   contextValue = 'etcdrootnode';
 }
 
 export class EtcdSpecialNode extends EtcdNode {
   constructor(parent_prefix: string, etcd_explorer: EtcdExplorerBase, parent: EtcdNode, nodeLabel?: string, nodePrefix?: string) {
-    super(nodeLabel ? nodeLabel : "**Special Node**",
+    super(nodeLabel ? nodeLabel : "Special",
       parent_prefix + (nodePrefix ? nodePrefix : "** special node**"),
       etcd_explorer,
       parent,
       true
     );
+    this.specialKey = separator + this.label;
   }
   contextValue = 'specialetcdnode';
 }
@@ -337,100 +359,75 @@ export class EtcdUpdatingNode extends EtcdSpecialNode {
 }
 
 export class EtcdNodeList {
-  protected nodes: Array<EtcdNode>;
+  protected nodeMap = new HashMap();
   public updatingNodes: boolean;
-  public updatingStr = "loading";
   public pageCount = 1;
   private explorer: EtcdExplorerBase;
   constructor(etcd_explorer: EtcdExplorerBase) {
     this.updatingNodes = false;
     this.explorer = etcd_explorer;
-    this.nodes = new Array<EtcdNode>();
   }
 
   removeNode(node?: EtcdNode) {
     if (node != undefined)
-      this.nodes.splice(this.nodes.indexOf(node), 1);
+      this.nodeMap.delete(node.specialKey);
   }
 
   removeUpdatingNodes() {
-    var spNodes = []
-    for (var node of this.nodes) {
-      if (node instanceof EtcdUpdatingNode) {
-        spNodes.push(node);
-      }
-    }
-    for (var n of spNodes) {
-      this.removeNode(n);
-    }
+    this.nodeMap.delete(separator + "loading");
   }
 
   removeSpecialNodes() {
-    var spNodes = []
-    for (var node of this.nodes) {
-      if (node instanceof EtcdSpecialNode) {
-        spNodes.push(node);
-      }
-    }
-    for (var n of spNodes) {
-      this.removeNode(n);
-    }
+    this.nodeMap.delete(separator + "Special");
+    this.nodeMap.delete(separator + "next->");
+    this.nodeMap.delete(separator + "Empty Workspace");
+    this.nodeMap.delete(separator + "loading");
   }
 
   countSpecialNodes() {
-    var spNodes = 0
-    for (var node of this.nodes) {
-      if (node instanceof EtcdSpecialNode) {
+    var spNodes = 0;
+    var sp = [
+      separator + "Special",
+      separator + "next->",
+      separator + "Empty Workspace",
+      separator + "loading"
+    ];
+    for (var spLabel of sp) {
+      if (this.nodeMap.has(spLabel)) {
         spNodes++;
       }
     }
     return spNodes;
   }
 
-  getNode(n: string): EtcdNode | undefined {
+  getNode(label: string): EtcdNode | undefined {
     var result = undefined;
-    for (var node of this.nodes) {
-      if (n == node.label) {
-        result = node;
-        break;
-      }
-    }
+    result = this.nodeMap.get(label);
     return result;
   }
 
-  pushNode(n: EtcdNode) {
-    this.nodes.push(n);
+  pushNode(node: EtcdNode) {
+    this.nodeMap.set(node.specialKey, node);
   }
 
   pushLabel(label: string, pre: string, node: EtcdNode, isleaf?: boolean, value?: string) {
-    this.nodes.push(new EtcdNode(label, pre, this.explorer, node, isleaf, value));
+    this.nodeMap.set(label, new EtcdNode(label, pre, this.explorer, node, isleaf, value));
   }
 
 
-  hasNode(n: EtcdNode): boolean {
-    var doesIt = false;
-    for (var node of this.nodes) {
-      if (n.label == node.label) {
-        doesIt = true;
-        break;
-      }
-    }
-    return doesIt;
+  hasNode(node: EtcdNode): boolean {
+    return this.nodeMap.has(node.specialKey);
   }
 
-  hasLabel(n: string): boolean {
-    var doesIt = false;
-    for (var node of this.nodes) {
-      if (n == node.label) {
-        doesIt = true;
-        break;
-      }
-    }
-    return doesIt;
+  hasLabel(label: string): boolean {
+    return this.nodeMap.has(label);
+  }
+
+  map() {
+    return this.nodeMap;
   }
 
   toArray() {
-    return this.nodes;
+    return this.nodeMap.values();
   }
-
 }
