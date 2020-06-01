@@ -148,7 +148,7 @@ export class EtcdExplorerBase {
       return;
     }
     let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
-    let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
+    let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider 
     vscode.window.showTextDocument(doc, { preview: false });
   }
 
@@ -156,6 +156,10 @@ export class EtcdExplorerBase {
   }
 
   initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) { }
+
+  async importResource(nodeResource?: EtcdNode) {
+    vscode.window.showOpenDialog({ openLabel: "Open JSON File", canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { "Json Files": ["json"] } });
+  }
 
   async exportResource(nodeResource?: EtcdNode) {
     var node = (nodeResource != undefined) ? nodeResource : this.RootNode();
@@ -182,6 +186,16 @@ export class EtcdExplorerBase {
     });
     promise.then(async () => {
     }, (reason) => { console.log(reason); });
+  }
+
+  async copyResourcePrefix(nodeResource?: EtcdNode) {
+    var node = (nodeResource != undefined) ? nodeResource : this.RootNode();
+    vscode.env.clipboard.writeText(node.prefix);
+  }
+
+  async copyResourceName(nodeResource?: EtcdNode) {
+    var node = (nodeResource != undefined) ? nodeResource : this.RootNode();
+    vscode.env.clipboard.writeText(node.label);
   }
 
   async deleteResource(node: EtcdNode) {

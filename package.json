@@ -58,6 +58,22 @@
         }
       },
       {
+        "command": "etcd3view.copyPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "etcd2view.copyPath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "etcd3view.copyName",
+        "title": "Copy Name"
+      },
+      {
+        "command": "etcd2view.copyName",
+        "title": "Copy Name"
+      },
+      {
         "command": "etcd3view.toJSON",
         "title": "Export To JSON",
         "icon": {
@@ -116,16 +132,38 @@
           "when": "view == etcd3view && viewItem == etcdnode"
         },
         {
-          "command": "etcd3view.deleteEntry",
-          "when": "view == etcd3view && viewItem == etcdnode"
-        },
-        {
           "command": "etcd2view.toJSON",
           "when": "view == etcd2view && viewItem == etcdnode"
         },
         {
+          "command": "etcd3view.copyPath",
+          "when": "view == etcd3view && viewItem == etcdnode",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd2view.copyPath",
+          "when": "view == etcd2view && viewItem == etcdnode",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd3view.copyName",
+          "when": "view == etcd3view && viewItem == etcdnode",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd2view.copyName",
+          "when": "view == etcd2view && viewItem == etcdnode",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd3view.deleteEntry",
+          "when": "view == etcd3view && viewItem == etcdnode",
+          "group": "7_modification"
+        },
+        {
           "command": "etcd2view.deleteEntry",
-          "when": "view == etcd2view && viewItem == etcdnode"
+          "when": "view == etcd2view && viewItem == etcdnode",
+          "group": "7_modification"
         }
       ]
     },
