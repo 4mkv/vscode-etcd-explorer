@@ -147,6 +147,9 @@ export class EtcdExplorerBase {
       this.refresh();
       return;
     }
+    if (node instanceof EtcdSpecialNode) {
+      return;
+    }
     let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
     let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider 
     vscode.window.showTextDocument(doc, { preview: false });
