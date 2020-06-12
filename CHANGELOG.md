@@ -2,6 +2,12 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
+## Etcd Explorer 0.2.0
+- multiple cluster support.
+- import JSON file
+- Copy Path
+- Copy Name
+
 ## Etcd Explorer 0.1.2
 - Potential bug fixed
 - Export to JSON added to view title 

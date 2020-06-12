@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { EtcdExplorerBase, EtcdNode, EtcdPagerNode } from "./etcdExplorer"
+import { EtcdExplorerBase, EtcdNode } from "./etcdExplorer"
+import { EtcdClusters } from './etcdCluster';
 
 var separator = "/";
 var schema = "etcd3_value_text_schema"
@@ -17,23 +18,28 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
       return;
     }
     this.client = new Etcd3({ hosts: this.etcd_host, grpcOptions: { "grpc.max_receive_message_length": -1, "grpc.grpclb_call_timeout_ms": 600000, }, });
-    this.initAllData(this.RootNode(), this.jsonToLevelNodeList);
+    this.initAllData(this.RootNode(), this.jsonToLevelNodeList, true, true);
     console.log("Done .. nodes");
   }
 
   getTreeItem(element: EtcdNode): vscode.TreeItem {
     if (element.isLeafNode()) {
-      element.command = { command: 'etcd3view.showvalue', title: "Show Value", arguments: [element], };
+      element.command = { command: 'etcd-explorer.etcd3view.showvalue', title: "Show Value", arguments: [element], };
     }
     return element;
   }
 
-  async deleteKeys(prefix: string) {
-    const ns = this.client.namespace(prefix);
-    await ns.delete().all(); // deletes all keys with the prefix
+  deleteKeys(prefix: string): Thenable<void> {
+    return new Promise(async (resolve) => {
+      if (this.client === undefined) return;
+      const ns = this.client.namespace(prefix);
+      await ns.delete().all(); // deletes all keys with the prefix
+      resolve();
+    });
   }
 
   initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
+    if (this.client === undefined) return;
     var prefix = node.prefix;
     var removePrefixFromKeys = (ignoreParentKeys != undefined) ? ignoreParentKeys : true;
     console.log("updating " + prefix);
@@ -89,4 +95,8 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     });
   }
 
+  protected write(key: string, value: any) {
+    var self = this;
+    this.client.put(key).value(value).then(() => { self.refreshData(); });
+  }
 }

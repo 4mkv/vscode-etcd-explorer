@@ -6,19 +6,21 @@ var HashMap = require('hashmap');
 var separator = "/";
 
 export class EtcdExplorerBase {
-
   private etcdSch = "";
   private rootNode: EtcdRootNode;
-  protected etcd_host: string;
-  protected max_keys: number;
+  protected etcd_host?: string;
   protected client: any;
-
+  protected conflictsResolution = "abort";
+  protected sameKeysResolution = "abort";
   constructor(schema: string) {
     console.log("Constructing ETCD Explorer");
     this.etcdSch = schema;
+
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
-    this.max_keys = conf.max_keys_per_level;
-    this.etcd_host = conf.etcd_host;
+    var importJSON = conf.importJSON;
+    console.log(importJSON);
+    this.conflictsResolution = importJSON.conflicts;
+    this.sameKeysResolution = importJSON.sameKeys;
     this.rootNode = new EtcdRootNode(this);
   }
 
@@ -28,6 +30,18 @@ export class EtcdExplorerBase {
 
   schema(): string {
     return this.etcdSch;
+  }
+
+  clearView() {
+    this.RootNode().getChildren().clearChildren();
+    this.refresh();
+  }
+
+  refreshView(clusterHost: string) {
+    if (clusterHost != this.etcd_host) {
+      this.etcd_host = clusterHost;
+      this.refreshData();
+    }
   }
 
   getChildren(element?: EtcdNode): Thenable<EtcdNode[]> {
@@ -45,57 +59,176 @@ export class EtcdExplorerBase {
     return Promise.resolve(element.getChildren().toArray());
   }
 
-  jsonToLevelNodeList(jsonObj: JSON, node: EtcdNode) {
-    var entries = Object.entries(jsonObj);
+  protected write(key: string, value: any) { }
 
-    var nodeList = node.getChildren();
-    var currentLabels = [];
-    for (var chNode of nodeList.toArray()) {
-      chNode.stale = true;
-      currentLabels.push(chNode.label);
-    }
-    for (var entry of entries) {
-      var isLeaf = false;
-      var key = entry[0];
-      var value = entry[1];
-      var str = Object.prototype.toString.call(value);
-      var type = str.slice(8, -1).toLowerCase();
-      if (type == "string"
-        || type == "boolean"
-        || type == "number"
-        || type == "date"
-        || type == "array"
-        || type == "undefined"
-        || type == "null"
-      ) {
-        isLeaf = true;
-      }
-      else {
-        isLeaf = false;
-      }
-      if (currentLabels.indexOf(key) > -1) {
-        var existingNode = nodeList.getNode(key);
-        if (existingNode != undefined && existingNode.isLeafNode() == isLeaf) {
-          existingNode.stale = false;
-          continue;
+  jsonToEtcd(jsonObj: JSON) {
+    if (this.client === undefined) return;
+    var currentKey = "";
+    var writes = new Array<{ value: string, key: string }>();
+    var conflicts = new Array<{ value: string, key: string, srcLeaf: boolean, dstLeaf: boolean }>();
+    var stack = new Array<{ json: JSON, key: string }>();
+    stack.push({ json: jsonObj, key: currentKey });
+    while (stack.length > 0) {
+      var obj = stack.pop();
+      if (!obj) break;
+      var json = obj.json;
+      var entries = Object.entries(json);
+      for (var entry of entries) {
+        currentKey = obj.key;
+        var isLeaf = false;
+        var key = entry[0];
+        var value = entry[1];
+        var str = Object.prototype.toString.call(value);
+        var type = str.slice(8, -1).toLowerCase();
+        if (type == "string"
+          || type == "boolean"
+          || type == "number"
+          || type == "date"
+          || type == "array"
+          || type == "undefined"
+          || type == "null"
+        ) {
+          isLeaf = true;
         }
         else {
-          nodeList.removeNode(existingNode);
+          isLeaf = false;
+        }
+        currentKey += separator + key;
+        var existingNode = this.findEtcdNode(currentKey);
+        if (!existingNode) {
+          existingNode = this.findEtcdNode(currentKey + separator);
+        }
+        if (!isLeaf) {
+          if (existingNode && existingNode.isLeafNode()) {
+            conflicts.push({ key: currentKey, value: value, srcLeaf: isLeaf, dstLeaf: existingNode.isLeafNode() });
+          }
+          stack.push({ json: value, key: currentKey });
+        }
+        else {
+          if (existingNode) {
+            if (!existingNode.isLeafNode()) {
+              conflicts.push({ key: currentKey, value: value, srcLeaf: isLeaf, dstLeaf: existingNode.isLeafNode() });
+            }
+            conflicts.push({ key: currentKey, value: value, srcLeaf: isLeaf, dstLeaf: existingNode.isLeafNode() });
+          }
+          else {
+            if (type == "array") {
+              var index = 0;
+              for (var val of value) {
+                var valObj = Object.create({});
+                valObj["[" + index + "]"] = val;
+                index++;
+                stack.push({ key: currentKey, json: valObj });
+              }
+            }
+            else {
+              writes.push({ key: currentKey, value: value });
+            }
+          }
         }
       }
-      var prefix = node.prefix + key + ((isLeaf) ? "" : separator);
-      nodeList.pushNode(new EtcdNode(key, prefix, this, node, isLeaf, isLeaf ? value : ""));
     }
+    if (conflicts.length > 0) {
+      var p = new Promise(async (resolve) => {
+        var str = "Conflicts:\n ==================================\n";
+        for (var c of conflicts) {
+          str += c.key + ": " + c.value + "\n";
+        }
+        let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
+        vscode.window.showTextDocument(doc, { preview: false });
+        resolve();
+      });
 
-    var removal = []
-    for (chNode of nodeList.toArray()) {
-      if (chNode.stale)
-        removal.push(chNode);
+      for (var conflict of conflicts) {
+        if (conflict.srcLeaf != conflict.dstLeaf) {
+          if (this.conflictsResolution == "abort") {
+            vscode.window.showErrorMessage("Aborting json import due to conflict with existing keys");
+            return;
+          }
+          if (this.conflictsResolution == "ignore")
+            continue;
+          if (this.conflictsResolution == "overwrite")
+            writes.push({ key: conflict.key, value: conflict.value });
+        }
+        else {
+          if (this.sameKeysResolution == "abort") {
+            vscode.window.showErrorMessage("Aborting json import as some keys already exist");
+            return;
+          }
+          if (this.sameKeysResolution == "ignore")
+            continue;
+          if (this.sameKeysResolution == "overwrite")
+            writes.push({ key: conflict.key, value: conflict.value });
+        }
+      }
     }
-    for (var chNode of removal) {
-      nodeList.removeNode(chNode);
+    for (var write of writes) {
+      this.write(write.key, write.value);
     }
-    nodeList.updatingNodes = false;
+  }
+
+  jsonToLevelNodeList(jsonObj: JSON, node: EtcdNode) {
+
+    var stack = Array<{ json: JSON, node: EtcdNode }>();
+    stack.push({ json: jsonObj, node: node });
+
+    while (stack.length > 0) {
+      var obj = stack.pop();
+      if (!obj) break;
+      var entries = Object.entries(obj.json);
+      var nodeList = obj.node.getChildren();
+      var currentLabels = [];
+      for (var chNode of nodeList.toArray()) {
+        chNode.stale = true;
+        currentLabels.push(chNode.label);
+      }
+      for (var entry of entries) {
+        var isLeaf = false;
+        var key = entry[0];
+        var value = entry[1];
+        var str = Object.prototype.toString.call(value);
+        var type = str.slice(8, -1).toLowerCase();
+        if (type == "string"
+          || type == "boolean"
+          || type == "number"
+          || type == "date"
+          || type == "array"
+          || type == "undefined"
+          || type == "null"
+        ) {
+          isLeaf = true;
+        }
+        else {
+          isLeaf = false;
+        }
+        if (currentLabels.indexOf(key) > -1) {
+          var existingNode = nodeList.getNode(key);
+          if (existingNode != undefined && existingNode.isLeafNode() == isLeaf) {
+            existingNode.stale = false;
+            continue;
+          }
+          else {
+            nodeList.removeNode(existingNode);
+          }
+        }
+        var prefix = obj.node.prefix + key + ((isLeaf) ? "" : separator);
+        var newNode = new EtcdNode(key, prefix, this, obj.node, isLeaf, isLeaf ? value : "");
+        nodeList.pushNode(newNode);
+        if (!isLeaf) {
+          stack.push({ json: value, node: newNode });
+        }
+      }
+
+      var removal = []
+      for (chNode of nodeList.toArray()) {
+        if (chNode.stale)
+          removal.push(chNode);
+      }
+      for (var chNode of removal) {
+        nodeList.removeNode(chNode);
+      }
+      nodeList.updatingNodes = false;
+    }
   }
 
   refreshAllNodes(nodeList?: EtcdNodeList | undefined) {
@@ -115,9 +248,6 @@ export class EtcdExplorerBase {
   }
 
   initClient() {
-    var conf = vscode.workspace.getConfiguration('etcd-explorer');
-    this.max_keys = conf.max_keys_per_level;
-    this.etcd_host = conf.etcd_host;
   }
 
   refreshData() {
@@ -128,7 +258,7 @@ export class EtcdExplorerBase {
     }
     this.rootNode.getChildren().removeSpecialNodes();
     //this.rootNodeList = new Etcd3NodeList();
-    this.initAllData(this.rootNode, this.jsonToLevelNodeList);
+    this.initAllData(this.rootNode, this.jsonToLevelNodeList, true, true);
 
     // recursivly refresh all nodes
     this.refreshAllNodes();
@@ -136,17 +266,8 @@ export class EtcdExplorerBase {
   }
 
   async openResource(node: EtcdNode) {
+    if (node === undefined) return;
     var prefix = node.prefix;
-    if (node instanceof EtcdPagerNode) {
-      var parent_node = node.Parent();
-      var nodeList;
-      nodeList = parent_node?.getChildren();
-      nodeList?.removeNode(node);
-      nodeList ? nodeList.pageCount++ : null;
-      if (parent_node != undefined) parent_node.refreshChildren = true;
-      this.refresh();
-      return;
-    }
     if (node instanceof EtcdSpecialNode) {
       return;
     }
@@ -155,13 +276,28 @@ export class EtcdExplorerBase {
     vscode.window.showTextDocument(doc, { preview: false });
   }
 
-  deleteKeys(prefix: string) {
+  deleteKeys(prefix: string): Thenable<void> {
+    return Promise.resolve();
   }
 
   initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) { }
 
-  async importResource(nodeResource?: EtcdNode) {
-    vscode.window.showOpenDialog({ openLabel: "Open JSON File", canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { "Json Files": ["json"] } });
+  async importResource() {
+    var self = this;
+    var promise = vscode.window.showOpenDialog({ openLabel: "Open JSON File", canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { "Json Files": ["json"] } });
+    promise.then(
+      (jsonFile) => {
+        //console.log(jsonFile);
+        if (jsonFile && jsonFile.length > 0) {
+          var path = jsonFile[0].fsPath;
+          const fs = require('fs');
+          let rawdata = fs.readFileSync(path);
+          let jsonObj = JSON.parse(rawdata);
+          self.jsonToEtcd(jsonObj);
+          self.refresh();
+        }
+      }
+    );
   }
 
   async exportResource(nodeResource?: EtcdNode) {
@@ -202,19 +338,22 @@ export class EtcdExplorerBase {
   }
 
   async deleteResource(node: EtcdNode) {
+    if (node === undefined) return;
     if (node instanceof EtcdSpecialNode) {
       return;
     }
     var prompt = vscode.window.showWarningMessage("Are you sure, you wish to delete all keys with prefix " + node.prefix, "Yes", "No");
     prompt.then((value) => {
       if (value == "Yes") {
-        this.deleteKeys(node.prefix);
-        var parent = node.Parent();
-        if (parent != undefined) {
-          parent.getChildren().removeNode(node);
-          parent.refreshChildren = true;
-          this.refresh();
-        }
+        var promise = this.deleteKeys(node.prefix);
+        promise.then(() => {
+          var parent = node.Parent();
+          if (parent != undefined) {
+            parent.getChildren().removeNode(node);
+            parent.refreshChildren = true;
+            this.refresh();
+          }
+        });
       }
     });
   }
@@ -225,13 +364,15 @@ export class EtcdExplorerBase {
       if (key == n.prefix) {
         return n;
       }
-      var rval = this.findEtcdNode(key, n.getChildren());
+      n.refreshChildren = true;
+      var rval = this.findEtcdNode(key, n.getChildren(true));
       if (rval != undefined) return rval;
     }
     return undefined;
   }
 
   findEtcdNodeData(key: string, nodeList?: EtcdNodeList | undefined): string {
+    key = decodeURI(key);
     const nodes = nodeList ? nodeList : this.rootNode.getChildren();
     for (var n of nodes.toArray()) {
       if (key.startsWith(n.prefix)) {
@@ -293,10 +434,11 @@ export class EtcdNode extends vscode.TreeItem {
   }
 
 
+
   getChildren(refreshCheck?: boolean): EtcdNodeList {
     var refresh = refreshCheck ? refreshCheck : false;
     if (refresh && this.refreshChildren) {
-      this.explorer.initAllData(this, this.explorer.jsonToLevelNodeList);
+      this.explorer.initAllData(this, this.explorer.jsonToLevelNodeList, true, true);
       this.refreshChildren = false;
     }
     return this.children;
@@ -356,17 +498,6 @@ export class EtcdSpecialNode extends EtcdNode {
   contextValue = 'specialetcdnode';
 }
 
-export class EtcdPagerNode extends EtcdSpecialNode {
-  constructor(parent_prefix: string, etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
-    super(parent_prefix, etcd_explorer, parent, "next->");
-  }
-  iconPath = {
-    light: path.join(__filename, '..', '..', 'resources', 'pager.gif'),
-    dark: path.join(__filename, '..', '..', 'resources', 'pager.gif')
-  };
-  contextValue = 'pageretcdnode';
-}
-
 export class EtcdEmptyWSNode extends EtcdSpecialNode {
   constructor(etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
     super(separator, etcd_explorer, parent, "Empty Workspace", ">>>empty_workspace<<<");
@@ -378,10 +509,14 @@ export class EtcdUpdatingNode extends EtcdSpecialNode {
   constructor(etcd_explorer: EtcdExplorerBase, parent: EtcdNode) {
     super(separator, etcd_explorer, parent, "loading", "");
   }
+
+  //iconPath = new vscode.ThemeIcon("tree-item-loading~spin");
+
   iconPath = {
-    light: path.join(__filename, '..', '..', 'resources', 'loading.gif'),
-    dark: path.join(__filename, '..', '..', 'resources', 'loading.gif')
+    light: path.join(__filename, '..', '..', 'resources', "light", 'loading.gif'),
+    dark: path.join(__filename, '..', '..', 'resources', "dark", 'loading.gif')
   };
+
   contextValue = 'etcdnodeloading';
 }
 
@@ -393,6 +528,13 @@ export class EtcdNodeList {
   constructor(etcd_explorer: EtcdExplorerBase) {
     this.updatingNodes = false;
     this.explorer = etcd_explorer;
+  }
+
+  clearChildren() {
+    for (var node of this.nodeMap.values()) {
+      node.getChildren().clearChildren();
+    }
+    this.nodeMap.clear();
   }
 
   removeNode(node?: EtcdNode) {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+  <style type="text/css">.icon-canvas-transparent{opacity:0;fill:#F6F6F6;} .icon-vs-out{opacity:0;fill:#F6F6F6;} .icon-vs-fg{stroke:#656565;fill:transparent} </style>
+  <rect class="icon-vs-fg" height="3" transform="matrix(1,0,0,1,0,0)" width="3" rx="1" x="6.5" y="1" />
+  <rect class="icon-vs-fg" height="3" transform="matrix(1,0,0,1,0,0)" width="3" rx="1" x="0.5" y="11" />
+  <rect class="icon-vs-fg" height="3" transform="matrix(1,0,0,1,0,0)" width="3" rx="1" x="6.5" y="11" />
+  <rect class="icon-vs-fg" height="3" transform="matrix(1,0,0,1,0,0)" width="3" rx="1" x="12.5" y="11" />
+  <polyline class="icon-vs-fg" points="8,4 8,11 8,8 2,8 14,8 14,11 14,8 2,8 2,11" />
+</svg>

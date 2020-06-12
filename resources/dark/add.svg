@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+  <style type="text/css">.icon-canvas-transparent{opacity:0;fill:#F6F6F6;} .icon-vs-out{opacity:100;stroke:#2D2D30;fill:transparent} .icon-vs-fg{stroke:#C5C5C5;fill:transparent} </style>
+  <polyline class="icon-vs-out" points="7,1.5 7,14.5 9,14.5 9,1.5 7,1.5" />
+  <polyline class="icon-vs-out" points="1.5,7 14.5,7 14.5,9 1.5,9 1.5,7" />
+  <polyline class="icon-vs-fg" points="8,2 8,14" />
+  <polyline class="icon-vs-fg" points="2,8 14,8" />
+</svg>

@@ -1,10 +1,16 @@
 {
   "name": "etcd-explorer",
   "displayName": "etcd-explorer",
-  "description": "",
-  "version": "0.1.2",
+  "description": "Explore etcd v2 and v3 key-values in visual studio code",
+  "version": "0.2.0",
   "publisher": "mkv",
   "icon": "resources/etcd.png",
+  "keywords": [
+    "etcd",
+    "etcdv2",
+    "etcdv3",
+    "explorer"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/4mkv/vscode-etcd-explorer"
@@ -29,141 +35,280 @@
           "type": "string",
           "default": "",
           "description": "hostname or ip address of etcd host and port [host:port]"
+        },
+        "etcd-explorer.importJSON.conflicts": {
+          "type": "string",
+          "enum": [
+            "overwrite",
+            "ignore",
+            "abort"
+          ],
+          "enumDescriptions": [
+            "overwrite all conflicting key value in etcd with that from json file",
+            "ignore all conflicting key value and continue. Current key value in JSON will be kept",
+            "abort the import altogether"
+          ],
+          "default": "abort",
+          "description": "How to resolve conflict while importing JSON"
+        },
+        "etcd-explorer.importJSON.sameKeys": {
+          "type": "string",
+          "enum": [
+            "overwrite",
+            "ignore",
+            "abort"
+          ],
+          "enumDescriptions": [
+            "overwrite all key value in etcd with that from json file",
+            "ignore all key value and continue. Current key value in JSON will be kept",
+            "abort the import altogether"
+          ],
+          "default": "abort",
+          "description": "How to resolve same keys while importing JSON"
         }
       }
     },
     "commands": [
       {
-        "command": "etcdclusterview.refreshEntry",
+        "command": "etcd-explorer.etcdclusterview.refreshEntry",
+        "category": "etcd-explorer",
         "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "when": "view == etcdclusterview",
+        "icon": "$(refresh)"
       },
       {
-        "command": "etcd3view.refreshEntry",
+        "command": "etcd-explorer.etcd3view.refreshEntry",
+        "category": "etcd-explorer",
         "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "when": "view == etcd3view",
+        "icon": "$(refresh)"
       },
       {
-        "command": "etcd2view.refreshEntry",
+        "command": "etcd-explorer.etcd2view.refreshEntry",
+        "category": "etcd-explorer",
         "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "when": "view == etcd2view",
+        "icon": "$(refresh)"
       },
       {
-        "command": "etcd3view.copyPath",
-        "title": "Copy Path"
+        "command": "etcd-explorer.etcdclusterview.addCluster",
+        "category": "etcd-explorer",
+        "title": "Add Cluster",
+        "icon": "$(add)"
       },
       {
-        "command": "etcd2view.copyPath",
-        "title": "Copy Path"
+        "command": "etcd-explorer.etcdclusterview.delCluster",
+        "category": "etcd-explorer",
+        "title": "Delete Cluster",
+        "icon": "$(trash)"
       },
       {
-        "command": "etcd3view.copyName",
+        "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
+        "category": "etcd-explorer",
+        "when": "view == etcdclusterview && viewItem == etcdcluster",
+        "title": "Set Current Cluster"
+      },
+      {
+        "command": "etcd-explorer.etcdclusterview.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcdclusterview",
         "title": "Copy Name"
       },
       {
-        "command": "etcd2view.copyName",
+        "command": "etcd-explorer.etcd3view.copyPath",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && viewItem == etcdnode",
+        "title": "Copy Path"
+      },
+      {
+        "command": "etcd-explorer.etcd2view.copyPath",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem == etcdnode",
+        "title": "Copy Path"
+      },
+      {
+        "command": "etcd-explorer.etcd3view.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && viewItem == etcdnode",
         "title": "Copy Name"
       },
       {
-        "command": "etcd3view.toJSON",
+        "command": "etcd-explorer.etcd2view.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem == etcdnode",
+        "title": "Copy Name"
+      },
+      {
+        "command": "etcd-explorer.etcd3view.toJSON",
+        "category": "etcd-explorer",
         "title": "Export To JSON",
         "icon": {
-          "light": "resources/light/exportJSON.svg",
-          "dark": "resources/dark/exportJSON.svg"
+          "dark": "resources/dark/exportJSON.svg",
+          "light": "resources/light/exportJSON.svg"
         }
       },
       {
-        "command": "etcd3view.deleteEntry",
-        "title": "Delete"
+        "command": "etcd-explorer.etcd3view.deleteEntry",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && viewItem == etcdnode",
+        "title": "Delete",
+        "icon": "$(trash)"
       },
       {
-        "command": "etcd2view.toJSON",
+        "command": "etcd-explorer.etcd2view.toJSON",
+        "category": "etcd-explorer",
         "title": "Export To JSON",
         "icon": {
-          "light": "resources/light/exportJSON.svg",
-          "dark": "resources/dark/exportJSON.svg"
+          "dark": "resources/dark/exportJSON.svg",
+          "light": "resources/light/exportJSON.svg"
         }
       },
       {
-        "command": "etcd2view.deleteEntry",
-        "title": "Delete"
+        "command": "etcd-explorer.etcd3view.fromJSON",
+        "category": "etcd-explorer",
+        "title": "Import JSON",
+        "icon": {
+          "dark": "resources/dark/importJSON.svg",
+          "light": "resources/light/importJSON.svg"
+        }
+      },
+      {
+        "command": "etcd-explorer.etcd2view.fromJSON",
+        "category": "etcd-explorer",
+        "title": "Import JSON",
+        "icon": {
+          "dark": "resources/dark/importJSON.svg",
+          "light": "resources/light/importJSON.svg"
+        }
+      },
+      {
+        "command": "etcd-explorer.etcd2view.deleteEntry",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem == etcdnode",
+        "title": "Delete",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "etcdclusterview.refreshEntry",
+          "command": "etcd-explorer.etcdclusterview.refreshEntry",
           "when": "view == etcdclusterview",
           "group": "navigation"
         },
         {
-          "command": "etcd3view.refreshEntry",
+          "command": "etcd-explorer.etcdclusterview.addCluster",
+          "when": "view == etcdclusterview",
+          "group": "navigation"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.refreshEntry",
           "when": "view == etcd3view",
           "group": "navigation"
         },
         {
-          "command": "etcd3view.toJSON",
+          "command": "etcd-explorer.etcd3view.toJSON",
           "when": "view == etcd3view",
           "group": "navigation"
         },
         {
-          "command": "etcd2view.refreshEntry",
+          "command": "etcd-explorer.etcd3view.fromJSON",
+          "when": "view == etcd3view",
+          "group": "navigation"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.refreshEntry",
           "when": "view == etcd2view",
           "group": "navigation"
         },
         {
-          "command": "etcd2view.toJSON",
+          "command": "etcd-explorer.etcd2view.toJSON",
+          "when": "view == etcd2view",
+          "group": "navigation"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.fromJSON",
           "when": "view == etcd2view",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "etcd3view.toJSON",
+          "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
+          "when": "view == etcdclusterview && viewItem == etcdcluster"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.delCluster",
+          "when": "view == etcdclusterview && viewItem == etcdcluster",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.copyName",
+          "when": "view == etcdclusterview",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.delCluster",
+          "when": "view == etcdclusterview && viewItem == etcdcluster",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.toJSON",
           "when": "view == etcd3view && viewItem == etcdnode"
         },
         {
-          "command": "etcd2view.toJSON",
+          "command": "etcd-explorer.etcd2view.toJSON",
+          "when": "view == etcd2view && viewItem == etcdnode",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.toJSON",
+          "when": "view == etcd3view && viewItem == etcdnode",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.toJSON",
           "when": "view == etcd2view && viewItem == etcdnode"
         },
         {
-          "command": "etcd3view.copyPath",
+          "command": "etcd-explorer.etcd3view.copyPath",
           "when": "view == etcd3view && viewItem == etcdnode",
           "group": "6_copypath"
         },
         {
-          "command": "etcd2view.copyPath",
+          "command": "etcd-explorer.etcd2view.copyPath",
           "when": "view == etcd2view && viewItem == etcdnode",
           "group": "6_copypath"
         },
         {
-          "command": "etcd3view.copyName",
+          "command": "etcd-explorer.etcd3view.copyName",
           "when": "view == etcd3view && viewItem == etcdnode",
           "group": "6_copypath"
         },
         {
-          "command": "etcd2view.copyName",
+          "command": "etcd-explorer.etcd2view.copyName",
           "when": "view == etcd2view && viewItem == etcdnode",
           "group": "6_copypath"
         },
         {
-          "command": "etcd3view.deleteEntry",
+          "command": "etcd-explorer.etcd3view.deleteEntry",
           "when": "view == etcd3view && viewItem == etcdnode",
           "group": "7_modification"
         },
         {
-          "command": "etcd2view.deleteEntry",
+          "command": "etcd-explorer.etcd2view.deleteEntry",
           "when": "view == etcd2view && viewItem == etcdnode",
           "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.deleteEntry",
+          "when": "view == etcd3view && viewItem == etcdnode",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.deleteEntry",
+          "when": "view == etcd2view && viewItem == etcdnode",
+          "group": "inline"
         }
       ]
     },
