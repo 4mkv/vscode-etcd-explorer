@@ -12,18 +12,31 @@ export class EtcdClusters {
   private currentCluster?: EtcdCluster;
   private etcd2View: Etcd2Explorer;
   private etcd3View: Etcd3Explorer;
-  constructor(etcd2Exp: Etcd2Explorer, etcd3Exp: Etcd3Explorer) {
+  private context: vscode.ExtensionContext;
+  constructor(_context: vscode.ExtensionContext, etcd2Exp: Etcd2Explorer, etcd3Exp: Etcd3Explorer) {
     this.etcd2View = etcd2Exp;
     this.etcd3View = etcd3Exp;
+    this.context = _context;
     console.log("Constructing ETCD Cluster Info");
+
+    var currentHost: string | undefined;
+    currentHost = this.context.workspaceState.get("etcd_current_host");
+
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
     var etcd_host = conf.etcd_host;
     if ((etcd_host != undefined) && (etcd_host.length > 0)) {
-      this.addCluster(etcd_host);
+      this.addCluster(etcd_host, currentHost);
+    }
+    var context_hosts: Array<string> | undefined;
+    context_hosts = this.context.workspaceState.get("etcd_hosts");
+    if (context_hosts && context_hosts.length > 0) {
+      for (var host of context_hosts.values()) {
+        this.addCluster(host, currentHost);
+      }
     }
   }
 
-  addCluster(addHost?: string) {
+  addCluster(addHost?: string, currentHost?: string) {
     var promise: Thenable<string | undefined>;
     var self = this;
     if (addHost != undefined) {
@@ -62,8 +75,30 @@ export class EtcdClusters {
             description = "version: " + val.etcdcluster;
           });
           promise.then(() => {
-            self.clusters.set(host, new EtcdCluster(host, this, description));
-            self.refresh();
+            if (!self.clusters.has(host)) {
+              var cl = new EtcdCluster(host, this, description);
+              self.clusters.set(host, cl);
+              if (currentHost && currentHost == host) {
+                if (this.currentCluster === undefined)
+                  self.setCurrentCluster(cl);
+              }
+              if (!currentHost) {
+                if (this.currentCluster === undefined)
+                  self.setCurrentCluster(cl);
+              }
+              var context_hosts: Array<string> | undefined;
+              var hostSet: Set<string>;
+              context_hosts = this.context.workspaceState.get("etcd_hosts");
+              if (!context_hosts || context_hosts.length == 0) {
+                hostSet = new Set<string>();
+              }
+              else {
+                hostSet = new Set<string>(context_hosts);
+              }
+              context_hosts = Array.from(hostSet.add(host));
+              this.context.workspaceState.update("etcd_hosts", context_hosts);
+              self.refresh();
+            }
           }, () => {
             self.refresh();
           });
@@ -88,8 +123,19 @@ export class EtcdClusters {
     prompt.then((value) => {
       if (value == "Yes") {
         self.clusters.delete(clusterLabel);
+
+        var context_hosts: Array<string> | undefined;
+        context_hosts = this.context.workspaceState.get("etcd_hosts");
+        var hostSet = new Set<string>(context_hosts);
+        if (context_hosts && clusterLabel) {
+          hostSet.delete(clusterLabel);
+        }
+        context_hosts = Array.from(hostSet);
+        this.context.workspaceState.update("etcd_hosts", context_hosts);
+
         if (self.currentCluster && self.currentCluster.label == clusterLabel) {
           self.currentCluster = undefined;
+          this.context.workspaceState.update("etcd_current_host", undefined);
           self.etcd2View.clearView();
           self.etcd3View.clearView();
           self.etcd2View.refreshView(clusterLabel);
@@ -117,6 +163,9 @@ export class EtcdClusters {
     this.currentCluster = cluster;
     this.currentCluster.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     this.currentCluster.getMembers(true);
+
+    this.context.workspaceState.update("etcd_current_host", cluster.label);
+
     this.etcd2View.refreshView(this.currentCluster.label);
     this.etcd3View.refreshView(this.currentCluster.label);
     this.refresh();
@@ -141,11 +190,6 @@ export class EtcdClusters {
       return element.getMembers();
     }
     else {
-      if (this.clusters.size > 0) {
-        if (this.currentCluster === undefined) {
-          this.setCurrentCluster(this.clusters.values()[0]);
-        }
-      }
       return Promise.resolve(this.clusters.values());
     }
   }

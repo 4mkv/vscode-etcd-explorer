@@ -14,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
   // This line of code will only be executed once when your extension is activated
   const etcd3Explorer = new Etcd3Explorer();
   const etcd2Explorer = new Etcd2Explorer();
-  const etcdClusters = new EtcdClusters(etcd2Explorer, etcd3Explorer);
+  const etcdClusters = new EtcdClusters(context, etcd2Explorer, etcd3Explorer);
   const etcd2ValueProvider = new etcdTextValueProvider(etcd2Explorer);
   const etcd3ValueProvider = new etcdTextValueProvider(etcd3Explorer);
   vscode.workspace.registerTextDocumentContentProvider(etcd2Explorer.schema(), etcd2ValueProvider);
