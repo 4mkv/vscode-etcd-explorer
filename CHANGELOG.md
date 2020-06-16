@@ -2,6 +2,9 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
+## Etcd Explorer 0.2.7
+- bug fixes
+
 ## Etcd Explorer 0.2.5
 - added clusters will persist.
 - also works on windows.
