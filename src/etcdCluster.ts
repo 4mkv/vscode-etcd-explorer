@@ -20,7 +20,7 @@ export class EtcdClusters {
     console.log("Constructing ETCD Cluster Info");
 
     var currentHost: string | undefined;
-    currentHost = this.context.workspaceState.get("etcd_current_host");
+    currentHost = this.context.globalState.get("etcd_current_host");
 
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
     var etcd_host = conf.etcd_host;
@@ -29,6 +29,12 @@ export class EtcdClusters {
     }
     var context_hosts: Array<string> | undefined;
     context_hosts = this.context.workspaceState.get("etcd_hosts");
+    if (context_hosts && context_hosts.length > 0) {
+      for (var host of context_hosts.values()) {
+        this.addCluster(host, currentHost);
+      }
+    }
+    context_hosts = this.context.globalState.get("etcd_hosts");
     if (context_hosts && context_hosts.length > 0) {
       for (var host of context_hosts.values()) {
         this.addCluster(host, currentHost);
@@ -88,7 +94,7 @@ export class EtcdClusters {
               }
               var context_hosts: Array<string> | undefined;
               var hostSet: Set<string>;
-              context_hosts = this.context.workspaceState.get("etcd_hosts");
+              context_hosts = this.context.globalState.get("etcd_hosts");
               if (!context_hosts || context_hosts.length == 0) {
                 hostSet = new Set<string>();
               }
@@ -96,7 +102,7 @@ export class EtcdClusters {
                 hostSet = new Set<string>(context_hosts);
               }
               context_hosts = Array.from(hostSet.add(host));
-              this.context.workspaceState.update("etcd_hosts", context_hosts);
+              this.context.globalState.update("etcd_hosts", context_hosts);
               self.refresh();
             }
           }, () => {
@@ -125,17 +131,17 @@ export class EtcdClusters {
         self.clusters.delete(clusterLabel);
 
         var context_hosts: Array<string> | undefined;
-        context_hosts = this.context.workspaceState.get("etcd_hosts");
+        context_hosts = this.context.globalState.get("etcd_hosts");
         var hostSet = new Set<string>(context_hosts);
         if (context_hosts && clusterLabel) {
           hostSet.delete(clusterLabel);
         }
         context_hosts = Array.from(hostSet);
-        this.context.workspaceState.update("etcd_hosts", context_hosts);
+        this.context.globalState.update("etcd_hosts", context_hosts);
 
         if (self.currentCluster && self.currentCluster.label == clusterLabel) {
           self.currentCluster = undefined;
-          this.context.workspaceState.update("etcd_current_host", undefined);
+          this.context.globalState.update("etcd_current_host", undefined);
           self.etcd2View.clearView();
           self.etcd3View.clearView();
           self.etcd2View.refreshView(clusterLabel);
@@ -164,7 +170,7 @@ export class EtcdClusters {
     this.currentCluster.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     this.currentCluster.getMembers(true);
 
-    this.context.workspaceState.update("etcd_current_host", cluster.label);
+    this.context.globalState.update("etcd_current_host", cluster.label);
 
     this.etcd2View.refreshView(this.currentCluster.label);
     this.etcd3View.refreshView(this.currentCluster.label);
