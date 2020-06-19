@@ -211,10 +211,15 @@ export class EtcdExplorerBase {
             nodeList.removeNode(existingNode);
           }
         }
-        var prefix = obj.node.prefix + key + ((isLeaf) ? "" : separator);
-        var newNode = new EtcdNode(key, prefix, this, obj.node, isLeaf, isLeaf ? value : "");
-        nodeList.pushNode(newNode);
-        if (!isLeaf) {
+        if (isLeaf) {
+          var prefix = obj.node.prefix + key;
+          var newNode = new EtcdLeafNode(key, prefix, this, obj.node, value);
+          nodeList.pushNode(newNode);
+        }
+        else {
+          var prefix = obj.node.prefix + key + separator;
+          var newNode = new EtcdNode(key, prefix, this, obj.node);
+          nodeList.pushNode(newNode);
           stack.push({ json: value, node: newNode });
         }
       }
@@ -298,6 +303,33 @@ export class EtcdExplorerBase {
         }
       }
     );
+  }
+
+  async addKeyValue(nodeResource?: EtcdNode) {
+    var node = (nodeResource != undefined) ? nodeResource : this.RootNode();
+    var prefix = node.prefix;
+    var keyBox = vscode.window.createInputBox();
+    keyBox.title = "Add Key Value";
+    keyBox.prompt = "Please type your key here?";
+    var self = this;
+    keyBox.onDidAccept(() => {
+      var valueBox = vscode.window.createInputBox();
+      valueBox.title = "Add Key Value";
+      valueBox.prompt = "Please type your value here?";
+      valueBox.onDidAccept(() => {
+        valueBox.hide();
+        var value = valueBox.value;
+        var key = keyBox.value;
+        if (key.startsWith(separator)) {
+          key = key.replace(separator, "");
+        }
+        key = prefix + key;
+        self.write(key, value);
+        //console.log(inputBox.value + ": " + inputBox2.value);
+      });
+      valueBox.show();
+    });
+    keyBox.show();
   }
 
   async exportResource(nodeResource?: EtcdNode) {
@@ -386,12 +418,12 @@ export class EtcdExplorerBase {
 }
 
 export class EtcdNode extends vscode.TreeItem {
-  private isLeaf: boolean;
+  protected isLeaf: boolean;
   protected children: EtcdNodeList;
   private parent?: EtcdNode;
   private explorer: EtcdExplorerBase;
   public refreshChildren = true;
-  private data?: string;
+  protected data?: string;
   public stale = false;
   public uri: string;
   public specialKey: string;
@@ -399,21 +431,19 @@ export class EtcdNode extends vscode.TreeItem {
     public readonly label: string,
     public readonly prefix: string,
     etcd_explorer: EtcdExplorerBase,
-    parentNode?: EtcdNode,
-    leafNode?: boolean,
-    value?: string
+    parentNode?: EtcdNode
   ) {
-    super(label, leafNode ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed);
+    super(label, vscode.TreeItemCollapsibleState.Collapsed);
     this.specialKey = label;
-    this.isLeaf = leafNode ? leafNode : false;
+    this.isLeaf = false;
     this.explorer = parentNode ? parentNode.explorer : etcd_explorer;
     this.children = new EtcdNodeList(this.explorer);
     this.uri = prefix;
-    this.data = value;
+    this.data = undefined;
     this.parent = parentNode;
   }
 
-  contextValue = 'etcdnode';
+  contextValue = 'etcdnode_dir';
 
   isLeafNode(): boolean {
     return this.isLeaf;
@@ -477,6 +507,22 @@ export class EtcdNode extends vscode.TreeItem {
   }
 }
 
+export class EtcdLeafNode extends EtcdNode {
+  constructor(
+    public readonly label: string,
+    public readonly prefix: string,
+    etcd_explorer: EtcdExplorerBase,
+    parentNode?: EtcdNode,
+    value?: string
+  ) {
+    super(label, prefix, etcd_explorer, parentNode);
+    super.collapsibleState = vscode.TreeItemCollapsibleState.None;
+    this.isLeaf = true;
+    this.data = value;
+  }
+  contextValue = 'etcdnode_leaf';
+}
+
 export class EtcdRootNode extends EtcdNode {
   constructor(etcd_explorer: EtcdExplorerBase) {
     super("Root", separator, etcd_explorer);
@@ -485,13 +531,12 @@ export class EtcdRootNode extends EtcdNode {
   contextValue = 'etcdrootnode';
 }
 
-export class EtcdSpecialNode extends EtcdNode {
+export class EtcdSpecialNode extends EtcdLeafNode {
   constructor(parent_prefix: string, etcd_explorer: EtcdExplorerBase, parent: EtcdNode, nodeLabel?: string, nodePrefix?: string) {
     super(nodeLabel ? nodeLabel : "Special",
       parent_prefix + (nodePrefix ? nodePrefix : "** special node**"),
       etcd_explorer,
-      parent,
-      true
+      parent
     );
     this.specialKey = separator + this.label;
   }
@@ -580,7 +625,12 @@ export class EtcdNodeList {
   }
 
   pushLabel(label: string, pre: string, node: EtcdNode, isleaf?: boolean, value?: string) {
-    this.nodeMap.set(label, new EtcdNode(label, pre, this.explorer, node, isleaf, value));
+    if (isleaf) {
+      this.nodeMap.set(label, new EtcdLeafNode(label, pre, this.explorer, node, value));
+    }
+    else {
+      this.nodeMap.set(label, new EtcdNode(label, pre, this.explorer, node));
+    }
   }
 
 

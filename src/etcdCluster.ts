@@ -55,7 +55,7 @@ export class EtcdClusters {
     promise.then((host) => {
       if ((host != undefined) && (host.length > 0)) {
         if (!this.hasCluster(host)) {
-          var client = new Etcd2(host);
+          var client = new Etcd2(host, { timeout: 500 });
           var description: string;
           var connection = "connecting";
           let promise = new Promise((resolve, reject) => {
@@ -74,7 +74,38 @@ export class EtcdClusters {
             if (val === undefined && err) {
               console.log(require('util').inspect(err, true, 10));
               connection = "failed";
-              vscode.window.showErrorMessage("Error while adding host: " + host + " (" + err.toString() + ")");
+              vscode.window.showErrorMessage("Error while adding host: " +
+                host +
+                " (" + err.toString() +
+                "). Do you wish to keep this cluster in context for later?",
+                { modal: true },
+                "Keep",
+                "Forget").then((action) => {
+                  if (action == "Keep") {
+                    var context_hosts: Array<string> | undefined;
+                    var hostSet: Set<string>;
+                    context_hosts = this.context.globalState.get("etcd_hosts");
+                    if (!context_hosts || context_hosts.length == 0) {
+                      hostSet = new Set<string>();
+                    }
+                    else {
+                      hostSet = new Set<string>(context_hosts);
+                    }
+                    context_hosts = Array.from(hostSet.add(host));
+                    this.context.globalState.update("etcd_hosts", context_hosts);
+                    self.refresh();
+                  }
+                  else {
+                    var context_hosts: Array<string> | undefined;
+                    context_hosts = this.context.globalState.get("etcd_hosts");
+                    var hostSet = new Set<string>(context_hosts);
+                    if (context_hosts) {
+                      hostSet.delete(host);
+                    }
+                    context_hosts = Array.from(hostSet);
+                    this.context.globalState.update("etcd_hosts", context_hosts);
+                  }
+                });
               return;
             }
             connection = "success";

@@ -91,6 +91,20 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "etcd-explorer.etcd3view.addKV",
+        "category": "etcd-explorer",
+        "title": "Add Key Value",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+        "icon": "$(add)"
+      },
+      {
+        "command": "etcd-explorer.etcd2view.addKV",
+        "category": "etcd-explorer",
+        "title": "Add Key Value",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
+        "icon": "$(add)"
+      },
+      {
         "command": "etcd-explorer.etcdclusterview.addCluster",
         "category": "etcd-explorer",
         "title": "Add Cluster",
@@ -117,31 +131,32 @@
       {
         "command": "etcd-explorer.etcd3view.copyPath",
         "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem == etcdnode",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "title": "Copy Path"
       },
       {
         "command": "etcd-explorer.etcd2view.copyPath",
         "category": "etcd-explorer",
-        "when": "view == etcd2view && viewItem == etcdnode",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "title": "Copy Path"
       },
       {
         "command": "etcd-explorer.etcd3view.copyName",
         "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem == etcdnode",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "title": "Copy Name"
       },
       {
         "command": "etcd-explorer.etcd2view.copyName",
         "category": "etcd-explorer",
-        "when": "view == etcd2view && viewItem == etcdnode",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "title": "Copy Name"
       },
       {
         "command": "etcd-explorer.etcd3view.toJSON",
         "category": "etcd-explorer",
         "title": "Export To JSON",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "icon": {
           "dark": "resources/dark/exportJSON.svg",
           "light": "resources/light/exportJSON.svg"
@@ -150,7 +165,7 @@
       {
         "command": "etcd-explorer.etcd3view.deleteEntry",
         "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem == etcdnode",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "title": "Delete",
         "icon": "$(trash)"
       },
@@ -158,15 +173,24 @@
         "command": "etcd-explorer.etcd2view.toJSON",
         "category": "etcd-explorer",
         "title": "Export To JSON",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
         "icon": {
           "dark": "resources/dark/exportJSON.svg",
           "light": "resources/light/exportJSON.svg"
         }
       },
       {
+        "command": "etcd-explorer.etcd2view.deleteEntry",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
         "command": "etcd-explorer.etcd3view.fromJSON",
         "category": "etcd-explorer",
         "title": "Import JSON",
+        "when": "view == etcd3view",
         "icon": {
           "dark": "resources/dark/importJSON.svg",
           "light": "resources/light/importJSON.svg"
@@ -176,17 +200,11 @@
         "command": "etcd-explorer.etcd2view.fromJSON",
         "category": "etcd-explorer",
         "title": "Import JSON",
+        "when": "view == etcd2view",
         "icon": {
           "dark": "resources/dark/importJSON.svg",
           "light": "resources/light/importJSON.svg"
         }
-      },
-      {
-        "command": "etcd-explorer.etcd2view.deleteEntry",
-        "category": "etcd-explorer",
-        "when": "view == etcd2view && viewItem == etcdnode",
-        "title": "Delete",
-        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -207,6 +225,11 @@
           "group": "navigation"
         },
         {
+          "command": "etcd-explorer.etcd3view.addKV",
+          "when": "view == etcd3view",
+          "group": "navigation"
+        },
+        {
           "command": "etcd-explorer.etcd3view.toJSON",
           "when": "view == etcd3view",
           "group": "navigation"
@@ -218,6 +241,11 @@
         },
         {
           "command": "etcd-explorer.etcd2view.refreshEntry",
+          "when": "view == etcd2view",
+          "group": "navigation"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.addKV",
           "when": "view == etcd2view",
           "group": "navigation"
         },
@@ -254,60 +282,80 @@
         },
         {
           "command": "etcd-explorer.etcd3view.toJSON",
-          "when": "view == etcd3view && viewItem == etcdnode"
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
         },
         {
           "command": "etcd-explorer.etcd2view.toJSON",
-          "when": "view == etcd2view && viewItem == etcdnode",
-          "group": "inline"
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
         },
         {
           "command": "etcd-explorer.etcd3view.toJSON",
-          "when": "view == etcd3view && viewItem == etcdnode",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "inline"
         },
         {
           "command": "etcd-explorer.etcd2view.toJSON",
-          "when": "view == etcd2view && viewItem == etcdnode"
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "inline"
         },
         {
           "command": "etcd-explorer.etcd3view.copyPath",
-          "when": "view == etcd3view && viewItem == etcdnode",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd2view.copyPath",
-          "when": "view == etcd2view && viewItem == etcdnode",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd3view.copyName",
-          "when": "view == etcd3view && viewItem == etcdnode",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd2view.copyName",
-          "when": "view == etcd2view && viewItem == etcdnode",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd3view.deleteEntry",
-          "when": "view == etcd3view && viewItem == etcdnode",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "7_modification"
         },
         {
           "command": "etcd-explorer.etcd2view.deleteEntry",
-          "when": "view == etcd2view && viewItem == etcdnode",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "7_modification"
         },
         {
           "command": "etcd-explorer.etcd3view.deleteEntry",
-          "when": "view == etcd3view && viewItem == etcdnode",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "inline"
         },
         {
           "command": "etcd-explorer.etcd2view.deleteEntry",
-          "when": "view == etcd2view && viewItem == etcdnode",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.addKV",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.addKV",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.addKV",
+          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.addKV",
+          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
           "group": "inline"
         }
       ]

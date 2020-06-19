@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { EtcdExplorerBase, EtcdNode } from "./etcdExplorer"
-import { EtcdClusters } from './etcdCluster';
 
 var separator = "/";
 var schema = "etcd3_value_text_schema"

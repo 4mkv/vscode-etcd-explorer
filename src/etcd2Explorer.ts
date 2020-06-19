@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { EtcdExplorerBase, EtcdNode } from "./etcdExplorer"
-import { EtcdClusters } from './etcdCluster';
 const Etcd2 = require('node-etcd');
 
 var separator = "/";

@@ -41,6 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand('etcd-explorer.etcd2view.copyPath', (node?: EtcdNode) => etcd2Explorer.copyResourcePrefix(node));
   vscode.commands.registerCommand('etcd-explorer.etcd3view.copyName', (node?: EtcdNode) => etcd3Explorer.copyResourceName(node));
   vscode.commands.registerCommand('etcd-explorer.etcd2view.copyName', (node?: EtcdNode) => etcd2Explorer.copyResourceName(node));
+  vscode.commands.registerCommand('etcd-explorer.etcd3view.addKV', (node?: EtcdNode) => etcd3Explorer.addKeyValue(node));
+  vscode.commands.registerCommand('etcd-explorer.etcd2view.addKV', (node?: EtcdNode) => etcd2Explorer.addKeyValue(node));
 
   vscode.workspace.onDidChangeConfiguration(e => {
     if (e.affectsConfiguration('etcd-explorer.etcd_host')) {
