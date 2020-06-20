@@ -2,7 +2,7 @@
   "name": "etcd-explorer",
   "displayName": "etcd-explorer",
   "description": "Explore etcd v2 and v3 key-values in visual studio code",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "mkv",
   "icon": "resources/etcd.png",
   "keywords": [
