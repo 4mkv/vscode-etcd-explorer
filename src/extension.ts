@@ -72,10 +72,21 @@ class etcdTextValueProvider implements vscode.TextDocumentContentProvider {
 
   provideTextDocumentContent(uri: vscode.Uri): string {
     // simply invoke cowsay, use uri-path as text
+    var data: string | undefined;
+    var error: string;
     var uriPath = uri.toString().replace(this.etcdExplorer.schema() + ":", "");
     var node = this.etcdExplorer.findEtcdNode(uriPath);
-    if (!node) return "==>Key not found<==";
-    return node.getData();
+    if (!node) {
+      error = "Key not found: " + uriPath;
+    }
+    else
+      data = node.getData();
+
+    error = data ? "" : "No Value found for " + uriPath;
+    if (error && !data) {
+      vscode.window.showErrorMessage(error);
+    }
+    return (data) ? data : "";
     //return decodeURI();
   }
 }

@@ -38,6 +38,7 @@ export class EtcdClusters {
         this.addCluster(host, currentHost);
       }
     }
+    this.context.workspaceState.update("etcd_hosts", undefined);
     context_hosts = this.context.globalState.get("etcd_hosts");
     if (context_hosts && context_hosts.length > 0) {
       for (var host of context_hosts.values()) {

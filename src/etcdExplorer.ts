@@ -505,27 +505,32 @@ export class EtcdNode extends vscode.TreeItem {
     return this.parent;
   }
 
-  getData(): string {
-    return (this.data) ? this.data : "==>No value found<==";
+  getData(): string | undefined {
+    if (!this.isLeafNode())
+      throw this.prefix + " is not leaf node.";
+    return this.data;
   }
 
   async Value(): Promise<any> {
     var data: any;
+    var error: any;
     if (!this.isLeafNode())
-      data = "==>Not a leaf Node<==";
+      error = this.prefix + " is not leaf node.";
     var self = this;
     this.explorer.getValue(this.prefix).then((value: any) => {
       data = value;
       self.data = value;
       let uri = vscode.Uri.parse(this.explorer.schema() + ":" + self.prefix);
       self.explorer.refreshDocument(uri);
+    }).catch((reason: string) => {
+      error = reason;
     });
 
     return new Promise((resolve: any) => {
       var interval = setInterval(() => {
-        if (data != undefined) {
+        if (data != undefined || error != undefined) {
           clearInterval(interval);
-          resolve(data);
+          resolve(error, data);
         }
       }, 100);
     });

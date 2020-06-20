@@ -144,27 +144,31 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     );
   }
 
-  async getValue(key: string): Promise<any> {
+  async getValue(key: string) {
     var value: any;
+    var error: string;
     await this.client.get(key, (err: any, val: any) => {
       if (err) {
         console.log("Set Error: " + key);
-        value = require('util').inspect(err, true, 10);
+        error = require('util').inspect(err, true, 10);
         console.log(value);
       }
       else {
         // node must be there
         if (val.node === undefined) {
-          throw "node is undefined";
+          error = "Error: node is undefined for key " + key;
         }
         value = val.node.value;
       }
     });
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       var timer = setInterval(() => {
-        if (value != undefined) {
+        if (value != undefined || error != undefined) {
           clearInterval(timer);
-          resolve(value);
+          if (!value && error)
+            reject(error);
+          else
+            resolve(value);
         }
       }, 100);
     });
