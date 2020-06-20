@@ -69,7 +69,7 @@ export class EtcdExplorerBase {
 
   protected write(key: string, value: any) { }
 
-  jsonToEtcd(jsonObj: JSON) {
+  async jsonToEtcd(jsonObj: JSON) {
     if (this.client === undefined) return;
     var currentKey = "";
     var writes = new Array<{ value: string, key: string }>();
@@ -205,9 +205,8 @@ export class EtcdExplorerBase {
         }
       }
       var self = this;
-      this.deleteKeys(write.key).then(() => {
-        self.write(write.key, write.value);
-      });
+      await this.deleteKeys(write.key);
+      self.write(write.key, write.value);
     }
   }
 

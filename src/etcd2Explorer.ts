@@ -44,17 +44,17 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
                   console.log("Delete Error: " + prefix);
                   console.log(require('util').inspect(err, true, 10));
                 }
-                // resolve after 50 milliseconds
+                // resolve after 5 milliseconds
                 setTimeout(() => {
                   resolve();
-                }, 50);
+                }, 5);
               });
             }
             else {
-              // resolve after 50 milliseconds
+              // resolve after 5 milliseconds
               setTimeout(() => {
                 resolve();
-              }, 50);
+              }, 5);
             }
           });
         }
