@@ -12,16 +12,24 @@ export class EtcdExplorerBase {
   protected client: any;
   protected conflictsResolution = "abort";
   protected sameKeysResolution = "abort";
+  protected documentChanged?: vscode.EventEmitter<vscode.Uri>;
   constructor(schema: string) {
     console.log("Constructing ETCD Explorer");
     this.etcdSch = schema;
-
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
     var importJSON = conf.importJSON;
     console.log(importJSON);
     this.conflictsResolution = importJSON.conflicts;
     this.sameKeysResolution = importJSON.sameKeys;
     this.rootNode = new EtcdRootNode(this);
+  }
+
+  setDocumentChangedEventEmitter(_documentChanged?: vscode.EventEmitter<vscode.Uri>) {
+    this.documentChanged = _documentChanged;
+  }
+
+  refreshDocument(uri: vscode.Uri) {
+    this.documentChanged?.fire(uri);
   }
 
   public RootNode(): EtcdRootNode {
@@ -129,20 +137,20 @@ export class EtcdExplorerBase {
       }
     }
     if (conflicts.length > 0) {
-      var p = new Promise(async (resolve) => {
-        var str = "Conflicts:\n ==================================\n";
-        for (var c of conflicts) {
-          str += c.key + ": " + c.value + "\n";
-        }
-        let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
-        vscode.window.showTextDocument(doc, { preview: false });
-        resolve();
-      });
-
       for (var conflict of conflicts) {
         if (conflict.srcLeaf != conflict.dstLeaf) {
           if (this.conflictsResolution == "abort") {
             vscode.window.showErrorMessage("Aborting json import due to conflict with existing keys");
+            var p = new Promise(async (resolve) => {
+              var str = "Conflicts:\n ==================================\n";
+              for (var c of conflicts) {
+                str += c.key + ": " + c.value + "\n";
+              }
+              let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
+              vscode.window.showTextDocument(doc, { preview: false });
+              resolve();
+            });
+
             return;
           }
           if (this.conflictsResolution == "ignore")
@@ -153,6 +161,16 @@ export class EtcdExplorerBase {
         else {
           if (this.sameKeysResolution == "abort") {
             vscode.window.showErrorMessage("Aborting json import as some keys already exist");
+            var p = new Promise(async (resolve) => {
+              var str = "Conflicts:\n ==================================\n";
+              for (var c of conflicts) {
+                str += c.key + ": " + c.value + "\n";
+              }
+              let doc = await vscode.workspace.openTextDocument({ content: str, language: "json" });
+              vscode.window.showTextDocument(doc, { preview: false });
+              resolve();
+            });
+
             return;
           }
           if (this.sameKeysResolution == "ignore")
@@ -163,7 +181,19 @@ export class EtcdExplorerBase {
       }
     }
     for (var write of writes) {
-      this.write(write.key, write.value);
+      var n = this.findEtcdNode(write.key);
+      if (n) {
+        var parent = n.Parent();
+        if (parent) {
+          console.log("Removing node: " + n.prefix);
+          parent.getChildren().removeNode(n);
+          parent.refreshChildren = true;
+        }
+      }
+      var self = this;
+      this.deleteKeys(write.key).then(() => {
+        self.write(write.key, write.value);
+      });
     }
   }
 
@@ -276,9 +306,15 @@ export class EtcdExplorerBase {
     if (node instanceof EtcdSpecialNode) {
       return;
     }
-    let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
-    let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider 
-    vscode.window.showTextDocument(doc, { preview: false });
+    node.Value().then(async (value: any) => {
+      //let doc = await vscode.workspace.openTextDocument({ content: value, language: "json" }); // calls back into the provider 
+      var token = require('crypto').randomBytes(48).toString('hex');
+      token = token.toString('base64').replace(/\//g, '_').replace(/:/g, '-');
+      //let uri = vscode.Uri.parse(this.schema() + ":" + token + "//" + prefix);
+      let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
+      let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider 
+      vscode.window.showTextDocument(doc, { preview: false });
+    });
   }
 
   deleteKeys(prefix: string): Thenable<void> {
@@ -324,7 +360,18 @@ export class EtcdExplorerBase {
           key = key.replace(separator, "");
         }
         key = prefix + key;
-        self.write(key, value);
+        // convert key value to json
+        var labels = key.split(separator).reverse();
+        var jsonObj: any = value;
+        for (var label of labels) {
+          if (!label || label.length == 0)
+            continue;
+          var newObj = Object.create({});
+          newObj[label] = jsonObj;
+          jsonObj = newObj;
+        }
+        self.jsonToEtcd(jsonObj);
+        //self.write(key, value);
         //console.log(inputBox.value + ": " + inputBox2.value);
       });
       valueBox.show();
@@ -390,30 +437,21 @@ export class EtcdExplorerBase {
     });
   }
 
-  findEtcdNode(key: string, nodeList?: EtcdNodeList | undefined): EtcdNode | undefined {
-    const nodes = nodeList ? nodeList : this.rootNode.getChildren();
-    for (var n of nodes.toArray()) {
-      if (key == n.prefix) {
-        return n;
-      }
-      n.refreshChildren = true;
-      var rval = this.findEtcdNode(key, n.getChildren(true));
-      if (rval != undefined) return rval;
-    }
-    return undefined;
-  }
+  async getValue(key: string): Promise<any> { }
 
-  findEtcdNodeData(key: string, nodeList?: EtcdNodeList | undefined): string {
-    key = decodeURI(key);
-    const nodes = nodeList ? nodeList : this.rootNode.getChildren();
-    for (var n of nodes.toArray()) {
-      if (key.startsWith(n.prefix)) {
-        if (n.isLeafNode())
-          return n.Value();
-        return this.findEtcdNodeData(key, n.getChildren());
-      }
+  findEtcdNode(key: string, nodeList?: EtcdNodeList | undefined): EtcdNode | undefined {
+    var nodes = nodeList ? nodeList : this.RootNode().getChildren(true);
+    var labels = key.split(separator);
+    var node: EtcdNode | undefined;
+    for (var label of labels) {
+      if (!label || label.length == 0) continue;
+      if (!nodes.hasLabel(label)) return undefined;
+      var node = nodes.getNode(label);
+      if (!node) return undefined;
+      nodes = node.getChildren();
     }
-    return "==>Key Not Found<=="
+    if (!node) return undefined;
+    return node;
   }
 }
 
@@ -453,14 +491,36 @@ export class EtcdNode extends vscode.TreeItem {
     return this.parent;
   }
 
-  Value(): string {
+  getData(): string {
+    return (this.data) ? this.data : "==>No value found<==";
+  }
+
+  async Value(): Promise<any> {
+    var data: any;
     if (!this.isLeafNode())
-      return "==>Not a leaf Node<==";
-    return this.data ? this.data : "==>No Value<==";
+      data = "==>Not a leaf Node<==";
+    var self = this;
+    this.explorer.getValue(this.prefix).then((value: any) => {
+      data = value;
+      self.data = value;
+      let uri = vscode.Uri.parse(this.explorer.schema() + ":" + self.prefix);
+      self.explorer.refreshDocument(uri);
+    });
+
+    return new Promise((resolve: any) => {
+      var interval = setInterval(() => {
+        if (data != undefined) {
+          clearInterval(interval);
+          resolve(data);
+        }
+      }, 100);
+    });
   }
 
   setValue(val: string) {
     this.data = val;
+    let uri = vscode.Uri.parse(this.explorer.schema() + ":" + this.prefix);
+    this.explorer.refreshDocument(uri);
   }
 
 
@@ -481,7 +541,7 @@ export class EtcdNode extends vscode.TreeItem {
 
     if (ready) {
       if (this.isLeaf) {
-        out[this.label] = this.Value();
+        out[this.label] = this.data;
       }
       else {
         nodes = this.getChildren().toArray();

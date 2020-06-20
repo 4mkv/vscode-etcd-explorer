@@ -59,16 +59,23 @@ export function deactivate() { }
 
 class etcdTextValueProvider implements vscode.TextDocumentContentProvider {
   // emitter and its event
-  onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
-  onDidChange = this.onDidChangeEmitter.event;
+  _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+  get onDidChange() {
+    return this._onDidChange.event;
+  }
+
   private etcdExplorer: EtcdExplorerBase;
   constructor(etcdExp: EtcdExplorerBase) {
     this.etcdExplorer = etcdExp;
+    this.etcdExplorer.setDocumentChangedEventEmitter(this._onDidChange);
   }
 
   provideTextDocumentContent(uri: vscode.Uri): string {
     // simply invoke cowsay, use uri-path as text
-    return this.etcdExplorer.findEtcdNodeData(uri.toString().replace(this.etcdExplorer.schema() + ":", ""));
+    var uriPath = uri.toString().replace(this.etcdExplorer.schema() + ":", "");
+    var node = this.etcdExplorer.findEtcdNode(uriPath);
+    if (!node) return "==>Key not found<==";
+    return node.getData();
     //return decodeURI();
   }
 }

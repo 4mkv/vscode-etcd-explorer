@@ -94,6 +94,19 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     });
   }
 
+  async getValue(key: string): Promise<any> {
+    var value: any;
+    value = this.client.get(key).string();
+    return new Promise((resolve) => {
+      var timer = setInterval(() => {
+        if (value != undefined) {
+          clearInterval(timer);
+          resolve(value);
+        }
+      }, 50);
+    });
+  }
+
   protected write(key: string, value: any) {
     var self = this;
     this.client.put(key).value(value).then(() => { self.refreshData(); });

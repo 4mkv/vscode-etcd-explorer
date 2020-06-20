@@ -19,6 +19,10 @@ export class EtcdClusters {
     this.context = _context;
     console.log("Constructing ETCD Cluster Info");
 
+    this.initClusters();
+  }
+
+  private initClusters() {
     var currentHost: string | undefined;
     currentHost = this.context.globalState.get("etcd_current_host");
 
@@ -243,9 +247,8 @@ export class EtcdClusters {
   }
 
   refreshData() {
-    if (this.currentCluster != undefined) {
-      this.currentCluster.getMembers(true);
-    }
+    this.clusters.clear();
+    this.initClusters();
   }
 }
 

@@ -30,18 +30,43 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
 
   deleteKeys(prefix: string): Thenable<void> {
     return new Promise((resolve) => {
-      if (this.client != undefined) {
-        this.client.del(prefix, { recursive: true }, console.log);
-        this.client.del(prefix, { recursive: true }, console.log);
+      try {
+        if (this.client != undefined) {
+          this.client.del(prefix, { recursive: true }, (err: any, val: any) => {
+            if (err) {
+              console.log("Delete Error: " + prefix);
+              console.log(require('util').inspect(err, true, 10));
+            }
+
+            if (prefix.endsWith(separator)) {
+              this.client.del(prefix, { recursive: true }, (err: any, val: any) => {
+                if (err) {
+                  console.log("Delete Error: " + prefix);
+                  console.log(require('util').inspect(err, true, 10));
+                }
+                // resolve after 50 milliseconds
+                setTimeout(() => {
+                  resolve();
+                }, 50);
+              });
+            }
+            else {
+              // resolve after 50 milliseconds
+              setTimeout(() => {
+                resolve();
+              }, 50);
+            }
+          });
+        }
       }
-      setTimeout(() => {
-        resolve();
-      }, 100);
+      catch {
+      }
     });
   }
 
   initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
     if (this.client === undefined) return;
+    if (node.isLeafNode()) return;
     var prefix = node.prefix;
     var removePrefixFromKeys = (ignoreParentKeys != undefined) ? ignoreParentKeys : true;
     var recursion = (recursive != undefined) ? recursive : false;
@@ -119,10 +144,44 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     );
   }
 
+  async getValue(key: string): Promise<any> {
+    var value: any;
+    await this.client.get(key, (err: any, val: any) => {
+      if (err) {
+        console.log("Set Error: " + key);
+        value = require('util').inspect(err, true, 10);
+        console.log(value);
+      }
+      else {
+        // node must be there
+        if (val.node === undefined) {
+          throw "node is undefined";
+        }
+        value = val.node.value;
+      }
+    });
+    return new Promise((resolve) => {
+      var timer = setInterval(() => {
+        if (value != undefined) {
+          clearInterval(timer);
+          resolve(value);
+        }
+      }, 100);
+    });
+  }
+
   protected write(key: string, value: any) {
     var self = this;
-    this.client.set(key, value, () => {
-      self.refreshData();
+    console.log("Setting: " + key + " = " + value);
+    this.client.set(key, value, (err: any, val: any) => {
+      if (err) {
+        console.log("Set Error: " + key);
+        console.log(require('util').inspect(err, true, 10));
+      }
+      // refresh after 100 milliseconds
+      setTimeout(() => {
+        self.refreshData();
+      }, 100);
     });
   }
 
