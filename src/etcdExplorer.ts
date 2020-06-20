@@ -155,8 +155,22 @@ export class EtcdExplorerBase {
           }
           if (this.conflictsResolution == "ignore")
             continue;
-          if (this.conflictsResolution == "overwrite")
-            writes.push({ key: conflict.key, value: conflict.value });
+          if (this.conflictsResolution == "overwrite") {
+            if (!conflict.srcLeaf) {
+              var n = this.findEtcdNode(conflict.key.replace('/' + separator + '$/', ""));
+              if (n) {
+                var parent = n.Parent();
+                this.deleteKeys(n.prefix).then(() => {
+                  if (parent) {
+                    parent.getChildren().removeNode(n);
+                    parent.refreshChildren = true;
+                  }
+                });
+              }
+            }
+            else
+              writes.push({ key: conflict.key, value: conflict.value });
+          }
         }
         else {
           if (this.sameKeysResolution == "abort") {
@@ -643,8 +657,12 @@ export class EtcdNodeList {
   }
 
   removeNode(node?: EtcdNode) {
-    if (node != undefined)
+    if (node != undefined) {
+      var p = node.Parent();
+      if (p)
+        p.refreshChildren = true;
       this.nodeMap.delete(node.specialKey);
+    }
   }
 
   removeUpdatingNodes() {
