@@ -5,6 +5,7 @@ All notable changes to the "etcd-viewer" extension will be documented in this fi
 ## Etcd Explorer 0.3.0
 - Add key Values
 - Option to choose between Keeping cluster in context for later or forgetting, if it fails to connect to cluster
+- bug fixes
 
 ## Etcd Explorer 0.2.7
 - bug fixes
