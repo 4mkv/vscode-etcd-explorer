@@ -325,8 +325,10 @@ export class EtcdExplorerBase {
       token = token.toString('base64').replace(/\//g, '_').replace(/:/g, '-');
       //let uri = vscode.Uri.parse(this.schema() + ":" + token + "//" + prefix);
       let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
-      let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider 
-      vscode.window.showTextDocument(doc, { preview: false });
+      let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider
+      var txt = doc.getText();
+      if (txt && txt.length > 0)
+        vscode.window.showTextDocument(doc, { preview: false });
     });
   }
 
