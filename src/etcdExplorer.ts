@@ -321,8 +321,8 @@ export class EtcdExplorerBase {
     }
     node.Value().then(async (value: any) => {
       //let doc = await vscode.workspace.openTextDocument({ content: value, language: "json" }); // calls back into the provider 
-      var token = require('crypto').randomBytes(48).toString('hex');
-      token = token.toString('base64').replace(/\//g, '_').replace(/:/g, '-');
+      //var token = require('crypto').randomBytes(48).toString('hex');
+      //token = token.toString('base64').replace(/\//g, '_').replace(/:/g, '-');
       //let uri = vscode.Uri.parse(this.schema() + ":" + token + "//" + prefix);
       let uri = vscode.Uri.parse(this.schema() + ":" + prefix);
       let doc = await vscode.workspace.openTextDocument(uri); // calls back into the provider

@@ -31,9 +31,23 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
   deleteKeys(prefix: string): Thenable<void> {
     return new Promise(async (resolve) => {
       if (this.client === undefined) return;
-      const ns = this.client.namespace(prefix);
-      await ns.delete().all(); // deletes all keys with the prefix
-      resolve();
+      if (prefix.endsWith(separator)) {
+        const ns = this.client.namespace(prefix);
+        await ns.delete().all().then(() => {
+          resolve();
+        }).catch((reason: any) => {
+          console.log(reason);
+          resolve();
+        }); // deletes all keys with the prefix
+      }
+      else {
+        this.client.delete().key(prefix).then(() => {
+          resolve();
+        }).catch((reason: any) => {
+          console.log(reason);
+          resolve();
+        });
+      }
     });
   }
 
