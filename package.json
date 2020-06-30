@@ -2,7 +2,7 @@
   "name": "etcd-explorer",
   "displayName": "etcd-explorer",
   "description": "Explore etcd v2 and v3 key-values in visual studio code",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "publisher": "mkv",
   "icon": "resources/etcd.png",
   "keywords": [
@@ -35,6 +35,24 @@
           "type": "string",
           "default": "",
           "description": "hostname or ip address of etcd host and port [host:port]"
+        },
+        "etcd-explorer.importJSON.arrays": {
+          "type": "string",
+          "enum": [
+            "Array as string",
+            "Expand array into indexed objects"
+          ],
+          "enumDescriptions": [
+            "Write array data as string",
+            "use array index as key (e.g. [0], [1], ...) and value as value to index key"
+          ],
+          "default": "Array as string",
+          "description": "How to treat array data type while importing JSON"
+        },
+        "etcd-explorer.exportJSON.nested": {
+          "type": "boolean",
+          "default": true,
+          "description": "Export keys as nested json."
         },
         "etcd-explorer.importJSON.conflicts": {
           "type": "string",

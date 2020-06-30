@@ -12,8 +12,8 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("Initializing etcd-explorer");
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  const etcd3Explorer = new Etcd3Explorer();
-  const etcd2Explorer = new Etcd2Explorer();
+  const etcd3Explorer = new Etcd3Explorer(context);
+  const etcd2Explorer = new Etcd2Explorer(context);
   const etcdClusters = new EtcdClusters(context, etcd2Explorer, etcd3Explorer);
   const etcd2ValueProvider = new etcdTextValueProvider(etcd2Explorer);
   const etcd3ValueProvider = new etcdTextValueProvider(etcd3Explorer);

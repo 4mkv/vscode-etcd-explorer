@@ -2,6 +2,12 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
+## Etcd Explorer 0.3.4
+- Better handling of array data while importing json
+- Better handling of etcd3 data
+- Export to json as flat or nested json
+- Bug fixes and code improvements
+
 ## Etcd Explorer 0.3.3
 - bug fixes for etcd3
 

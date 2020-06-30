@@ -6,8 +6,8 @@ var separator = "/";
 var schema = "etcd2_value_text_schema"
 
 export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
-  constructor() {
-    super(schema);
+  constructor(_context: vscode.ExtensionContext) {
+    super(schema, _context);
     this.initClient();
   }
 
@@ -28,43 +28,46 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     return element;
   }
 
-  deleteKeys(prefix: string): Thenable<void> {
-    return new Promise((resolve) => {
+  async deleteKeys(prefix: string) {
+    return new Promise((resolve, reject) => {
       try {
         if (this.client != undefined) {
           this.client.del(prefix, { recursive: true }, (err: any, val: any) => {
             if (err) {
-              console.log("Delete Error: " + prefix);
-              console.log(require('util').inspect(err, true, 10));
-            }
-
-            if (prefix.endsWith(separator)) {
-              this.client.del(prefix, { recursive: true }, (err: any, val: any) => {
-                if (err) {
-                  console.log("Delete Error: " + prefix);
-                  console.log(require('util').inspect(err, true, 10));
-                }
-                // resolve after 5 milliseconds
-                setTimeout(() => {
-                  resolve();
-                }, 5);
-              });
+              console.log("Error: deleting " + prefix + " " + err.message + " [" + this.schema() + "]");
+              if (prefix.endsWith(separator)) {
+                this.client.del(prefix, { recursive: true }, (err2: any, val: any) => {
+                  if (err2) {
+                    console.log("Error: deleting " + prefix + " " + err.message + " [" + this.schema() + "]");
+                    reject(err2.message);
+                  }
+                  else {
+                    console.log(prefix + " deleted" + " [" + this.schema() + "]");
+                    resolve();
+                  }
+                });
+              }
+              else {
+                reject(err.message);
+              }
             }
             else {
-              // resolve after 5 milliseconds
-              setTimeout(() => {
-                resolve();
-              }, 5);
+              console.log(prefix + " deleted" + " [" + this.schema() + "]");
+              resolve();
             }
           });
         }
+        else {
+          reject("etcd client is not ready.");
+        }
       }
-      catch {
+      catch (err) {
+        reject(err.message);
       }
     });
   }
 
-  initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
+  async initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
     if (this.client === undefined) return;
     if (node.isLeafNode()) return;
     var prefix = node.prefix;
@@ -72,9 +75,9 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     var recursion = (recursive != undefined) ? recursive : false;
     var nodeList = node.getChildren();
 
-    if (nodeList.updatingNodes)
+    if (!nodeList.canUpdate())
       return;
-    nodeList.updatingNodes = true;
+    nodeList.updating();
 
     var self = this;
     this.client.get(prefix, { recursive: recursion },
@@ -130,28 +133,26 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
                 }
               }
             }
-            callback(jsonObj, node);
+            callback(jsonObj, node, self);
           }
         }
         catch (e) {
           console.log(e);
         }
         finally {
-          nodeList.updatingNodes = false;
+          nodeList.updated();
           self.refresh();
         }
       }
     );
   }
 
-  async getValue(key: string) {
+  async getValue(key: string): Promise<any> {
     var value: any;
     var error: string;
     await this.client.get(key, (err: any, val: any) => {
       if (err) {
-        console.log("Set Error: " + key);
-        error = require('util').inspect(err, true, 10);
-        console.log(value);
+        console.log("Error: getting key (" + key + ") " + err.message + " [" + this.schema() + "]");
       }
       else {
         // node must be there
@@ -174,18 +175,19 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     });
   }
 
-  protected write(key: string, value: any) {
+  protected async write(key: string, value: any) {
     var self = this;
-    console.log("Setting: " + key + " = " + value);
-    this.client.set(key, value, (err: any, val: any) => {
-      if (err) {
-        console.log("Set Error: " + key);
-        console.log(require('util').inspect(err, true, 10));
-      }
-      // refresh after 100 milliseconds
-      setTimeout(() => {
-        self.refreshData();
-      }, 100);
+    return new Promise((resolve, reject) => {
+      this.client.set(key, value, (err: any, val: any) => {
+        if (err) {
+          console.log("Error: writing key (" + key + ") " + err.message + " [" + this.schema() + "]");
+          reject(err.message);
+        }
+        else {
+          console.log("Written key " + key + " [" + this.schema() + "]");
+          resolve();
+        }
+      });
     });
   }
 
