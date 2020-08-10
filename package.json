@@ -31,10 +31,9 @@
     "configuration": {
       "title": "EtcdExplorer",
       "properties": {
-        "etcd-explorer.etcd_host": {
+        "etcd-explorer.root_ca_path": {
           "type": "string",
-          "default": "",
-          "description": "hostname or ip address of etcd host and port [host:port]"
+          "description": "Path for root ca certificate, if using ssl."
         },
         "etcd-explorer.importJSON.arrays": {
           "type": "string",
@@ -87,6 +86,8 @@
       }
     },
     "commands": [
+      // cluster
+      // Refresh
       {
         "command": "etcd-explorer.etcdclusterview.refreshEntry",
         "category": "etcd-explorer",
@@ -94,27 +95,158 @@
         "when": "view == etcdclusterview",
         "icon": "$(refresh)"
       },
+      // Copy Name
+      {
+        "command": "etcd-explorer.etcdclusterview.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcdclusterview",
+        "title": "Copy Name"
+      },
+      // Add Cluster
+      {
+        "command": "etcd-explorer.etcdclusterview.addCluster",
+        "category": "etcd-explorer",
+        "title": "Add Cluster",
+        "icon": "$(add)"
+      },
+      // Delete Cluster
+      {
+        "command": "etcd-explorer.etcdclusterview.delCluster",
+        "category": "etcd-explorer",
+        "title": "Delete Cluster",
+        "icon": "$(trash)"
+      },
+      // Set Current Cluster
+      {
+        "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
+        "category": "etcd-explorer",
+        "when": "view == etcdclusterview && viewItem =~ /^etcdcluster(tlsauth)*(?<!current)$/",
+        "title": "Set Current Cluster"
+      },
+      //Client Certificate/Key
+      {
+        "command": "etcd-explorer.etcdclusterview.addClientCerts",
+        "category": "etcd-explorer",
+        "when": "view == etcdclusterview && viewItem =~ /^etcdclusterincerterr$/",
+        "title": "Client Certificate/Key pair ..."
+      },
+      // etcd3
+      // Copy Name
+      {
+        "command": "etcd-explorer.etcd3view.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Copy Name"
+      },
+      // Copy Path
+      {
+        "command": "etcd-explorer.etcd3view.copyPath",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Copy Path"
+      },
+      // Refresh
       {
         "command": "etcd-explorer.etcd3view.refreshEntry",
         "category": "etcd-explorer",
         "title": "Refresh",
-        "when": "view == etcd3view",
+        "when": "view == etcd3view && etcdcluster.currentcluster",
         "icon": "$(refresh)"
       },
-      {
-        "command": "etcd-explorer.etcd2view.refreshEntry",
-        "category": "etcd-explorer",
-        "title": "Refresh",
-        "when": "view == etcd2view",
-        "icon": "$(refresh)"
-      },
+      // Add Key Value
       {
         "command": "etcd-explorer.etcd3view.addKV",
         "category": "etcd-explorer",
         "title": "Add Key Value",
-        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+        "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$/ ",
         "icon": "$(add)"
       },
+      // To JSON
+      {
+        "command": "etcd-explorer.etcd3view.toJSON",
+        "category": "etcd-explorer",
+        "title": "Export To JSON",
+        "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "icon": {
+          "dark": "resources/dark/exportJSON.svg",
+          "light": "resources/light/exportJSON.svg"
+        }
+      },
+      // From JSON
+      {
+        "command": "etcd-explorer.etcd3view.fromJSON",
+        "category": "etcd-explorer",
+        "title": "Import JSON",
+        "when": "view == etcd3view && etcdcluster.currentcluster",
+        "icon": {
+          "dark": "resources/dark/importJSON.svg",
+          "light": "resources/light/importJSON.svg"
+        }
+      },
+      // Delete
+      {
+        "command": "etcd-explorer.etcd3view.deleteEntry",
+        "category": "etcd-explorer",
+        "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      // Enable Basic Auth
+      {
+        "command": "etcd-explorer.etcd3view.enableAuth",
+        "category": "etcd-explorer",
+        "title": "Enable Basic Auth",
+        "when": "view == etcd3view && etcdcluster.currentcluster && !etcd3.basicauth_enabled && !etcdcluster.tlsauth",
+        "icon": "$(lock)"
+      },
+      // Disable Basic Auth
+      {
+        "command": "etcd-explorer.etcd3view.disableAuth",
+        "category": "etcd-explorer",
+        "title": "Disable Basic Auth",
+        "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauthroot && etcd3.basicauth_enabled && !etcdcluster.tlsauth",
+        "icon": "$(unlock)"
+      },
+      // Login
+      {
+        "command": "etcd-explorer.etcd3view.login",
+        "category": "etcd-explorer",
+        "title": "Login ...",
+        "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauth_enabled && !etcd3.basicauth",
+        "icon": "$(log-in)"
+      },
+      // Logout
+      {
+        "command": "etcd-explorer.etcd3view.logout",
+        "category": "etcd-explorer",
+        "title": "Logout",
+        "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauth_enabled && etcd3.basicauth",
+        "icon": "$(log-out)"
+      },
+      // etcd2
+      // Copy Name
+      {
+        "command": "etcd-explorer.etcd2view.copyName",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Copy Name"
+      },
+      // Copy Path
+      {
+        "command": "etcd-explorer.etcd2view.copyPath",
+        "category": "etcd-explorer",
+        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+        "title": "Copy Path"
+      },
+      // Refresh
+      {
+        "command": "etcd-explorer.etcd2view.refreshEntry",
+        "category": "etcd-explorer",
+        "title": "Refresh",
+        "when": "view == etcd2view && etcdcluster.currentcluster",
+        "icon": "$(refresh)"
+      },
+      // Add Key Value
       {
         "command": "etcd-explorer.etcd2view.addKV",
         "category": "etcd-explorer",
@@ -122,71 +254,7 @@
         "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
         "icon": "$(add)"
       },
-      {
-        "command": "etcd-explorer.etcdclusterview.addCluster",
-        "category": "etcd-explorer",
-        "title": "Add Cluster",
-        "icon": "$(add)"
-      },
-      {
-        "command": "etcd-explorer.etcdclusterview.delCluster",
-        "category": "etcd-explorer",
-        "title": "Delete Cluster",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
-        "category": "etcd-explorer",
-        "when": "view == etcdclusterview && viewItem == etcdcluster",
-        "title": "Set Current Cluster"
-      },
-      {
-        "command": "etcd-explorer.etcdclusterview.copyName",
-        "category": "etcd-explorer",
-        "when": "view == etcdclusterview",
-        "title": "Copy Name"
-      },
-      {
-        "command": "etcd-explorer.etcd3view.copyPath",
-        "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "title": "Copy Path"
-      },
-      {
-        "command": "etcd-explorer.etcd2view.copyPath",
-        "category": "etcd-explorer",
-        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "title": "Copy Path"
-      },
-      {
-        "command": "etcd-explorer.etcd3view.copyName",
-        "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "title": "Copy Name"
-      },
-      {
-        "command": "etcd-explorer.etcd2view.copyName",
-        "category": "etcd-explorer",
-        "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "title": "Copy Name"
-      },
-      {
-        "command": "etcd-explorer.etcd3view.toJSON",
-        "category": "etcd-explorer",
-        "title": "Export To JSON",
-        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "icon": {
-          "dark": "resources/dark/exportJSON.svg",
-          "light": "resources/light/exportJSON.svg"
-        }
-      },
-      {
-        "command": "etcd-explorer.etcd3view.deleteEntry",
-        "category": "etcd-explorer",
-        "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-        "title": "Delete",
-        "icon": "$(trash)"
-      },
+      // To JSON
       {
         "command": "etcd-explorer.etcd2view.toJSON",
         "category": "etcd-explorer",
@@ -197,6 +265,7 @@
           "light": "resources/light/exportJSON.svg"
         }
       },
+      // Delete 
       {
         "command": "etcd-explorer.etcd2view.deleteEntry",
         "category": "etcd-explorer",
@@ -204,29 +273,114 @@
         "title": "Delete",
         "icon": "$(trash)"
       },
+      // From JSON
       {
-        "command": "etcd-explorer.etcd3view.fromJSON",
+        "command": "etcd-explorer.etcd2view.fromJSON",
         "category": "etcd-explorer",
         "title": "Import JSON",
-        "when": "view == etcd3view",
+        "when": "view == etcd2view && etcdcluster.currentcluster",
         "icon": {
           "dark": "resources/dark/importJSON.svg",
           "light": "resources/light/importJSON.svg"
         }
       },
+      // Enable Basic Auth
       {
-        "command": "etcd-explorer.etcd2view.fromJSON",
+        "command": "etcd-explorer.etcd2view.enableAuth",
         "category": "etcd-explorer",
-        "title": "Import JSON",
-        "when": "view == etcd2view",
-        "icon": {
-          "dark": "resources/dark/importJSON.svg",
-          "light": "resources/light/importJSON.svg"
-        }
+        "title": "Enable Basic Auth",
+        "when": "view == etcd2view && etcdcluster.currentcluster && !etcd2.basicauth_enabled && !etcdcluster.tlsauth",
+        "icon": "$(lock)"
+      },
+      // Disable Basic Auth
+      {
+        "command": "etcd-explorer.etcd2view.disableAuth",
+        "category": "etcd-explorer",
+        "title": "Disable Basic Auth",
+        "when": "view == etcd2view && etcdcluster.currentcluster && etcd3.basicauthroot && etcd2.basicauth_enabled && !etcdcluster.tlsauth",
+        "icon": "$(unlock)"
+      },
+      // Login
+      {
+        "command": "etcd-explorer.etcd2view.login",
+        "category": "etcd-explorer",
+        "title": "Login ...",
+        "when": "view == etcd2view && etcdcluster.currentcluster && etcd2.basicauth_enabled && !etcdcluster.basicauth",
+        "icon": "$(log-in)"
+      },
+      // Logout
+      {
+        "command": "etcd-explorer.etcd2view.logout",
+        "category": "etcd-explorer",
+        "title": "Logout",
+        "when": "view == etcd2view && etcdcluster.currentcluster && etcd2.basicauth_enabled && etcdcluster.basicauth",
+        "icon": "$(log-out)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        //cluster
+        {
+          "command": "etcd-explorer.etcdclusterview.refreshEntry",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.copyName",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.addClientCerts",
+          "when": "false"
+        },
+        //etcd3
+        {
+          "command": "etcd-explorer.etcd3view.refreshEntry",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.copyName",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.enableAuth",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.disableAuth",
+          "when": "false"
+        },
+        //etcd2
+        {
+          "command": "etcd-explorer.etcd2view.refreshEntry",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.copyName",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.enableAuth",
+          "when": "false"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.disableAuth",
+          "when": "false"
+        }
+      ],
       "view/title": [
+        //cluster
         {
           "command": "etcd-explorer.etcdclusterview.refreshEntry",
           "when": "view == etcdclusterview",
@@ -237,55 +391,94 @@
           "when": "view == etcdclusterview",
           "group": "navigation"
         },
+        //etcd3
+        {
+          "command": "etcd-explorer.etcd3view.enableAuth",
+          "when": "view == etcd3view && etcdcluster.currentcluster && !etcd3.basicauth_enabled && !etcdcluster.tlsauth"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.disableAuth",
+          "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauthroot && etcd3.basicauth_enabled && !etcdcluster.tlsauth"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.login",
+          "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauth_enabled && !etcd3.basicauth"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.logout",
+          "when": "view == etcd3view && etcdcluster.currentcluster && etcd3.basicauth_enabled && etcd3.basicauth"
+        },
         {
           "command": "etcd-explorer.etcd3view.refreshEntry",
-          "when": "view == etcd3view",
+          "when": "view == etcd3view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd3view.addKV",
-          "when": "view == etcd3view",
+          "when": "view == etcd3view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd3view.toJSON",
-          "when": "view == etcd3view",
+          "when": "view == etcd3view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd3view.fromJSON",
-          "when": "view == etcd3view",
+          "when": "view == etcd3view && etcdcluster.currentcluster",
           "group": "navigation"
+        },
+        //etcd2
+        {
+          "command": "etcd-explorer.etcd2view.enableAuth",
+          "when": "view == etcd2view && etcdcluster.currentcluster && !etcd2.basicauth_enabled && !etcdcluster.tlsauth"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.disableAuth",
+          "when": "view == etcd2view && etcdcluster.currentcluster && etcd2.basicauthroot && etcd2.basicauth_enabled && !etcdcluster.tlsauth"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.login",
+          "when": "view == etcd2view && etcdcluster.currentcluster && etcd2.basicauth_enabled && !etcd2.basicauth"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.logout",
+          "when": "view == etcd2view && etcdcluster.currentcluster && etcd2.basicauth_enabled && etcd2.basicauth"
         },
         {
           "command": "etcd-explorer.etcd2view.refreshEntry",
-          "when": "view == etcd2view",
+          "when": "view == etcd2view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd2view.addKV",
-          "when": "view == etcd2view",
+          "when": "view == etcd2view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd2view.toJSON",
-          "when": "view == etcd2view",
+          "when": "view == etcd2view && etcdcluster.currentcluster",
           "group": "navigation"
         },
         {
           "command": "etcd-explorer.etcd2view.fromJSON",
-          "when": "view == etcd2view",
+          "when": "view == etcd2view && etcdcluster.currentcluster",
           "group": "navigation"
         }
       ],
       "view/item/context": [
+        // cluster
         {
           "command": "etcd-explorer.etcdclusterview.setCurrentCluster",
-          "when": "view == etcdclusterview && viewItem == etcdcluster"
+          "when": "view == etcdclusterview && viewItem =~ /^etcdcluster(tlsauth)*(?<!current)$/"
+        },
+        {
+          "command": "etcd-explorer.etcdclusterview.addClientCerts",
+          "when": "view == etcdclusterview && viewItem =~ /^etcdclusterincerterr$/"
         },
         {
           "command": "etcd-explorer.etcdclusterview.delCluster",
-          "when": "view == etcdclusterview && viewItem == etcdcluster",
+          "when": "view == etcdclusterview && viewItem =~ /^etcdcluster.*/",
           "group": "inline"
         },
         {
@@ -295,85 +488,87 @@
         },
         {
           "command": "etcd-explorer.etcdclusterview.delCluster",
-          "when": "view == etcdclusterview && viewItem == etcdcluster",
+          "when": "view == etcdclusterview && viewItem =~ /^etcdcluster.*/",
           "group": "7_modification"
         },
+        // etcd3
         {
-          "command": "etcd-explorer.etcd3view.toJSON",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
-        },
-        {
-          "command": "etcd-explorer.etcd2view.toJSON",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
-        },
-        {
-          "command": "etcd-explorer.etcd3view.toJSON",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "inline"
-        },
-        {
-          "command": "etcd-explorer.etcd2view.toJSON",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "inline"
+          "command": "etcd-explorer.etcd3view.copyName",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd3view.copyPath",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "6_copypath"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.toJSON",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
+        },
+        {
+          "command": "etcd-explorer.etcd3view.toJSON",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.deleteEntry",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.deleteEntry",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "group": "inline"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.addKV",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd3view.addKV",
+          "when": "view == etcd3view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "inline"
+        },
+        // etcd2 
+        {
+          "command": "etcd-explorer.etcd2view.copyName",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
           "command": "etcd-explorer.etcd2view.copyPath",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "6_copypath"
         },
         {
-          "command": "etcd-explorer.etcd3view.copyName",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "6_copypath"
+          "command": "etcd-explorer.etcd2view.toJSON",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ "
         },
         {
-          "command": "etcd-explorer.etcd2view.copyName",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "6_copypath"
-        },
-        {
-          "command": "etcd-explorer.etcd3view.deleteEntry",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "7_modification"
-        },
-        {
-          "command": "etcd-explorer.etcd2view.deleteEntry",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "7_modification"
-        },
-        {
-          "command": "etcd-explorer.etcd3view.deleteEntry",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
+          "command": "etcd-explorer.etcd2view.toJSON",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "inline"
         },
         {
           "command": "etcd-explorer.etcd2view.deleteEntry",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
-          "group": "inline"
-        },
-        {
-          "command": "etcd-explorer.etcd3view.addKV",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "7_modification"
         },
         {
-          "command": "etcd-explorer.etcd2view.addKV",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
-          "group": "7_modification"
-        },
-        {
-          "command": "etcd-explorer.etcd3view.addKV",
-          "when": "view == etcd3view && viewItem =~ /^etcdnode_dir$/ ",
+          "command": "etcd-explorer.etcd2view.deleteEntry",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$|^etcdnode_leaf$/ ",
           "group": "inline"
         },
         {
           "command": "etcd-explorer.etcd2view.addKV",
-          "when": "view == etcd2view && viewItem =~ /^etcdnode_dir$/ ",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$/ ",
+          "group": "7_modification"
+        },
+        {
+          "command": "etcd-explorer.etcd2view.addKV",
+          "when": "view == etcd2view && etcdcluster.currentcluster && viewItem =~ /^etcdnode_dir$/ ",
           "group": "inline"
         }
       ]
@@ -413,25 +608,22 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/glob": "^7.1.1",
+    "@types/glob": "^7.1.3",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^13.11.0",
-    "@types/vscode": "^1.43.0",
-    "@typescript-eslint/eslint-plugin": "^2.26.0",
-    "@typescript-eslint/parser": "^2.26.0",
-    "electron": "^7.3.1",
-    "electron-rebuild": "^1.11.0",
+    "@types/node": "^13.13.15",
+    "@types/vscode": "^1.47.0",
+    "@typescript-eslint/eslint-plugin": "^2.34.0",
+    "@typescript-eslint/parser": "^2.34.0",
     "eslint": "^6.8.0",
-    "etcd3": "^0.2.13",
-    "grpc": "^1.23.3",
+    "etcd3": "^1.0.1",
     "hashmap": "^2.4.0",
     "node-etcd": "^7.0.0",
-    "vscode-test": "^1.3.0"
+    "vscode-test": "^1.4.0"
   },
   "dependencies": {
+    "etcd3": "^1.0.1",
     "hashmap": "^2.4.0",
-    "grpc": "^1.23.3",
-    "etcd3": "^0.2.13",
-    "node-etcd": "^7.0.0"
+    "node-etcd": "^7.0.0",
+    "ssl-root-cas": "^1.3.1"
   }
 }

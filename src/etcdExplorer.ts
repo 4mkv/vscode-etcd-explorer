@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { URL } from 'url';
 
 var HashMap = require('hashmap');
 
@@ -9,11 +10,17 @@ export class EtcdExplorerBase {
   private etcdSch = "";
   private rootNode: EtcdRootNode;
   protected etcd_host?: string;
+  protected protocol?: string;
+  protected host_options?: any;
+  protected authentication?: { username?: string, password?: string, cn?: string, roles?: string[] };
   protected client: any;
   protected conflictsResolution = "abort";
   protected sameKeysResolution = "abort";
   protected arrayResolution = "Array as string";
+  protected authEnabled = false;
+  protected isVisible = false;
   private context: vscode.ExtensionContext;
+  protected _treeView: vscode.TreeView<EtcdNode> | undefined;
   protected documentChanged?: vscode.EventEmitter<vscode.Uri>;
   constructor(schema: string, _context: vscode.ExtensionContext) {
     console.log("Constructing ETCD Explorer");
@@ -21,6 +28,71 @@ export class EtcdExplorerBase {
     this.etcdSch = schema;
     this.reloadConfig();
     this.rootNode = new EtcdRootNode(this);
+  }
+
+  async visibilityChanged(visible: boolean) {
+    this.isVisible = visible;
+    /*    if (!visible) {
+          this.clearView();
+        }
+        else {
+          if (this.etcd_host) {
+            this.refreshView(this.etcd_host);
+          }
+        }
+        */
+  }
+
+  setHost(etcdhostString?: string) {
+    if (etcdhostString) {
+      this.etcd_host = etcdhostString;
+      var url = new URL(etcdhostString);
+      this.protocol = url.protocol;
+    }
+    else {
+      this.etcd_host = undefined;
+      this.protocol = undefined;
+    }
+  }
+
+  protected setTreeViewTitleUser(user?: string, roles?: string[], cn?: string) {
+    if (this._treeView && this.authEnabled) {
+      if (cn) {
+        this._treeView.message = "Client Certificate CN: " + cn;
+      }
+      else {
+        if (!user) {
+          this._treeView.message = "user [roles]: [guest]";
+        }
+        else {
+          this._treeView.message = "user [roles]: " + user + ((roles === undefined) ? "" : (" [" + roles.toString() + "]"));
+        }
+      }
+    }
+    if (this._treeView && !this.authEnabled) {
+      this._treeView.message = "";
+    }
+  }
+
+  setTreeView(tv: vscode.TreeView<EtcdNode>) {
+    this._treeView = tv;
+    if (this.authentication) {
+      this.setTreeViewTitleUser(this.authentication.username, this.authentication.roles);
+    }
+    else {
+      this.setTreeViewTitleUser();
+    }
+  }
+
+  async isAuthEnabled() { }
+
+  async enableAuth() {
+    // check if auth is enabled
+    // else enable it
+  }
+
+  async disableAuth() {
+
   }
 
   protected reloadConfig() {
@@ -52,12 +124,21 @@ export class EtcdExplorerBase {
     return this.etcdSch;
   }
 
+  protected resetContextValues() {
+  }
+
   clearView() {
+    this.resetContextValues();
+    this.authEnabled = false;
+    this.setTreeViewTitleUser();
     this.RootNode().getChildren().clearChildren();
+    this.setHost(undefined);
     this.refresh();
   }
 
-  refreshView(clusterHost: string) {
+  refreshView(clusterHost: string, options?: any) {
+    if (!this.isVisible) return;
+
     var conf = vscode.workspace.getConfiguration('etcd-explorer');
     var importJSON = conf.importJSON;
     this.conflictsResolution = importJSON.conflicts;
@@ -65,9 +146,13 @@ export class EtcdExplorerBase {
     this.arrayResolution = importJSON.arrays;
 
     if (clusterHost != this.etcd_host) {
-      this.etcd_host = clusterHost;
+      this.setHost(clusterHost);
+      if (options) {
+        this.host_options = options;
+      }
       this.refreshData();
     }
+    this.isAuthEnabled();
   }
 
   getChildren(element?: EtcdNode): Thenable<EtcdNode[]> {
@@ -84,6 +169,98 @@ export class EtcdExplorerBase {
       return Promise.resolve([new EtcdEmptyWSNode(this, this.rootNode)]);
     }
     return Promise.resolve(element.getChildren().toArray());
+  }
+
+  async loginas(user: string, pwd: string) {
+  }
+
+  async login() {
+    var self = this;
+    self.basicLogin();
+    /*vscode.window.showQuickPick(["Basic Authentication", "TLS Certificates"]).then((selection) => {
+      if (selection === undefined) return;
+      if (selection == "Basic Authentication") {
+        self.basicLogin();
+      }
+      else {
+        self.tlsLogin();
+      }
+    });
+    */
+  }
+
+  async tlsLogin() {
+    vscode.window.showOpenDialog({
+      openLabel: "Open CA Certificate File",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: { "Certificate Files": ["pem"] }
+    }).then((caFile) => {
+      if (caFile) {
+        vscode.window.showOpenDialog({
+          openLabel: "Open Client Certificate File",
+          canSelectFiles: true,
+          canSelectFolders: false,
+          canSelectMany: false,
+          filters: { "Certificate Files": ["pem"] }
+        }).then((clientFile) => {
+          if (clientFile) {
+            vscode.window.showOpenDialog({
+              openLabel: "Open Key File",
+              canSelectFiles: true,
+              canSelectFolders: false,
+              canSelectMany: false,
+              filters: { "Key Files": ["pem"] }
+            }).then((keyFile) => {
+              if (keyFile) {
+
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  async basicLogin() {
+    var userBox = vscode.window.createInputBox();
+    userBox.title = "Login as user";
+    var self = this;
+    userBox.onDidAccept(async () => {
+      var pwdBox = vscode.window.createInputBox();
+      pwdBox.title = "Password";
+      pwdBox.password = true;
+      pwdBox.onDidAccept(async () => {
+        var pwd = pwdBox.value;
+        var user = userBox.value;
+        await self.loginas(user, pwd);
+        pwdBox.dispose();
+        userBox.dispose();
+      });
+      pwdBox.show();
+    });
+    userBox.show();
+  }
+
+  async logout() {
+    var hostString = this.etcd_host;
+    var protocol = this.protocol;
+    if (this.client.close) {
+      this.client.close();
+    }
+    this.client = undefined;
+    this.authentication = undefined;
+    this.host_options.auth = undefined;
+    this.clearView();
+
+    this.etcd_host = hostString;
+    this.protocol = protocol;
+
+    if (this.etcd_host) {
+      this.initClient();
+      this.refreshView(this.etcd_host);
+    }
   }
 
   protected async write(key: string, value: any) { return new Promise((resolve, reject) => { reject("Not Implemented in base class"); }); }
@@ -371,6 +548,8 @@ export class EtcdExplorerBase {
   }
 
   refreshAllNodes(nodeList?: EtcdNodeList | undefined) {
+    if (!this.isVisible) return;
+
     const nodes = nodeList ? nodeList : this.rootNode.getChildren();
     nodes.removeSpecialNodes();
     for (var n of nodes.toArray()) {
@@ -383,6 +562,8 @@ export class EtcdExplorerBase {
   readonly onDidChangeTreeData: vscode.Event<EtcdNode | undefined> = this._onDidChangeTreeData.event;
 
   refresh(): void {
+    if (!this.isVisible) return;
+
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -390,6 +571,8 @@ export class EtcdExplorerBase {
   }
 
   refreshData() {
+    if (!this.isVisible) return;
+
     // read the configuration again
     this.initClient();
     if (this.client === undefined) {
@@ -471,9 +654,11 @@ export class EtcdExplorerBase {
       valueBox.title = "Add Key Value";
       valueBox.prompt = "Please type your value here?";
       valueBox.onDidAccept(async () => {
-        valueBox.hide();
+        //valueBox.hide();
         var value = valueBox.value;
         var key = keyBox.value;
+        valueBox.dispose();
+        keyBox.dispose();
         if (key.startsWith(separator)) {
           key = key.replace(separator, "");
         }
@@ -597,9 +782,9 @@ export class EtcdExplorerBase {
       var keyBox = vscode.window.createInputBox();
       keyBox.title = "Delete Key";
       keyBox.onDidAccept(() => {
-        keyBox.hide();
         var key = keyBox.value;
         delKeys(self, key);
+        keyBox.dispose();
       });
       keyBox.show();
     }
@@ -641,7 +826,6 @@ export class EtcdNode extends vscode.TreeItem {
   protected data?: string;
   public stale = false;
   public uri: string;
-
   constructor(
     public readonly label: string,
     public readonly prefix: string,

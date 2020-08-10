@@ -1,6 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+process.env.GRPC_TRACE = 'all';
+process.env.GRPC_VERBOSITY = 'DEBUG';
+//process.env.GRPC_SSL_CIPHER_SUITES = 'HIGH+ECDSA';
+//process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 import { EtcdClusters, EtcdCluster, EtcdClusterViewItem } from './etcdCluster';
 import { Etcd3Explorer } from './etcd3Explorer';
@@ -20,8 +24,32 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.registerTextDocumentContentProvider(etcd2Explorer.schema(), etcd2ValueProvider);
   vscode.workspace.registerTextDocumentContentProvider(etcd3Explorer.schema(), etcd3ValueProvider);
   vscode.window.registerTreeDataProvider('etcdclusterview', etcdClusters);
-  vscode.window.registerTreeDataProvider('etcd3view', etcd3Explorer);
-  vscode.window.registerTreeDataProvider('etcd2view', etcd2Explorer);
+  //vscode.window.registerTreeDataProvider('etcd3view', etcd3Explorer);
+  //vscode.window.registerTreeDataProvider('etcd2view', etcd2Explorer);
+  var treeView3 = vscode.window.createTreeView('etcd3view', {
+    treeDataProvider: etcd3Explorer
+  });
+  var treeView2 = vscode.window.createTreeView('etcd2view', {
+    treeDataProvider: etcd2Explorer
+  });
+  etcd3Explorer.setTreeView(treeView3);
+  etcd2Explorer.setTreeView(treeView2);
+  treeView2.onDidChangeVisibility((val: any) => {
+    etcd2Explorer.visibilityChanged(val.visible);
+  });
+  treeView3.onDidChangeVisibility((val: any) => {
+    etcd3Explorer.visibilityChanged(val.visible);
+  });
+
+  vscode.commands.registerCommand('etcd-explorer.etcdclusterview.addClientCerts', (resource: EtcdCluster) => etcdClusters.addClientCerts(resource));
+  vscode.commands.registerCommand('etcd-explorer.etcd2view.enableAuth', () => etcd2Explorer.enableAuth());
+  vscode.commands.registerCommand('etcd-explorer.etcd3view.enableAuth', () => etcd3Explorer.enableAuth());
+  vscode.commands.registerCommand('etcd-explorer.etcd2view.disableAuth', () => etcd2Explorer.disableAuth());
+  vscode.commands.registerCommand('etcd-explorer.etcd3view.disableAuth', () => etcd3Explorer.disableAuth());
+  vscode.commands.registerCommand('etcd-explorer.etcd2view.login', () => etcd2Explorer.login());
+  vscode.commands.registerCommand('etcd-explorer.etcd3view.login', () => etcd3Explorer.login());
+  vscode.commands.registerCommand('etcd-explorer.etcd2view.logout', () => etcd2Explorer.logout());
+  vscode.commands.registerCommand('etcd-explorer.etcd3view.logout', () => etcd3Explorer.logout());
   vscode.commands.registerCommand('etcd-explorer.etcd2view.refreshEntry', () => etcd2Explorer.refreshData());
   vscode.commands.registerCommand('etcd-explorer.etcd3view.refreshEntry', () => etcd3Explorer.refreshData());
   vscode.commands.registerCommand('etcd-explorer.etcdclusterview.refreshEntry', () => etcdClusters.refreshData());
@@ -52,6 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
       etcd2Explorer.refreshData();
     }
   });
+
 }
 
 // this method is called when your extension is deactivated

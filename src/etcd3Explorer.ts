@@ -3,9 +3,19 @@ import { EtcdExplorerBase, EtcdNode } from "./etcdExplorer"
 
 var separator = "/";
 var schema = "etcd3_value_text_schema"
-const { Etcd3 } = require('etcd3');
+const { Etcd3, AuthClient } = require('etcd3');
+var fs = require('fs');
 
 export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataProvider<EtcdNode> {
+  private _etcd3_options?: {
+    hosts?: string,
+    grpcOptions?: any,
+    credentials?: any,
+    auth?: {
+      username: string,
+      password: string
+    }
+  };
   constructor(_context: vscode.ExtensionContext) {
     super(schema, _context)
     this.initClient();
@@ -16,9 +26,206 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     if (!this.etcd_host) {
       return;
     }
-    this.client = new Etcd3({ hosts: this.etcd_host, grpcOptions: { "grpc.max_receive_message_length": -1, "grpc.grpclb_call_timeout_ms": 600000, }, });
+    this._etcd3_options = {
+      hosts: this.etcd_host,
+      grpcOptions: {
+        "grpc.max_receive_message_length": -1,
+        "grpc.grpclb_call_timeout_ms": 600000,
+      },
+    }
+
+    if (this.protocol && this.protocol == "https:") {
+      var etcd3Credentials = {
+        rootCertificate: this.host_options.ca,
+        privateKey: this.host_options.key,
+        certChain: this.host_options.cert
+      }
+      if (!etcd3Credentials.rootCertificate) {
+        var conf = vscode.workspace.getConfiguration('etcd-explorer');
+        if (conf.root_ca_path) {
+          this.host_options.ca = fs.readFileSync(conf.root_ca_path);
+          etcd3Credentials.rootCertificate = this.host_options.ca;
+        }
+      }
+      this._etcd3_options.credentials = etcd3Credentials;
+    }
+    if (this.authentication && this.authentication.username && this.authentication.password) {
+      this._etcd3_options.auth = {
+        username: this.authentication.username,
+        password: this.authentication.password
+      }
+    }
+
+
+    this.client = new Etcd3(this._etcd3_options);
+    this.isAuthEnabled();
     this.initAllData(this.RootNode(), this.jsonToLevelNodeList, true, true);
     console.log("Done .. nodes");
+  }
+
+  async isAuthEnabled() {
+    if (this.client === undefined) return;
+    var dummyusr = "ootsrysuxnoomileslorpraaemetvdsrpedyceutswnimdat";
+    var dummypwd = "odymnayaetmslecotpdemareisissvxnwsrldteuopru";
+    var options: any;
+    if (this._etcd3_options) {
+      options = {
+        hosts: this._etcd3_options.hosts,
+        grpcOptions: this._etcd3_options.grpcOptions,
+        auth: {
+          username: dummyusr,
+          password: dummypwd
+        }
+      }
+      if (this.protocol == "https:") {
+        options = {
+          hosts: this._etcd3_options.hosts,
+          grpcOptions: this._etcd3_options.grpcOptions,
+          credentials: this._etcd3_options.credentials,
+          auth: {
+            username: dummyusr,
+            password: dummypwd
+          }
+        }
+      }
+    }
+    if (this.host_options && (this.host_options.cert.length > 0)) {
+      console.log("tls Auth is enabled");
+      let tls = require('tls');
+      let net = require('net');
+      let secureContext = tls.createSecureContext({
+        cert: this.host_options.cert
+      });
+      let secureSocket = new tls.TLSSocket(new net.Socket(), { secureContext });
+      let cert = secureSocket.getCertificate();
+      vscode.commands.executeCommand('setContext', 'etcdcluster.tlsauth', true);
+      vscode.commands.executeCommand('setContext', 'etcd2.basicauth_enabled', false);
+      this.authEnabled = true;
+      this.setTreeViewTitleUser(undefined, undefined, cert.subject.CN);
+    }
+    else {
+      vscode.commands.executeCommand('setContext', 'etcdcluster.tlsauth', false);
+      var client = new Etcd3(options);
+      client.auth.authenticate().then((resp: any) => {
+        console.log(resp);
+      }).catch((err: any) => {
+        if (err && err.message) {
+          if (err.message.includes("FAILED_PRECONDITION") && err.message.includes("authentication is not enabled")) {
+            console.log("Auth is disabled");
+            vscode.commands.executeCommand('setContext', 'etcd3.basicauth_enabled', false);
+            this.authEnabled = false;
+            this.setTreeViewTitleUser();
+          }
+          if (err.message.includes("authentication failed, invalid user ID or password")) {
+            console.log("Auth is enabled");
+            vscode.commands.executeCommand('setContext', 'etcd3.basicauth_enabled', true);
+            this.authEnabled = true;
+            if (this.authentication) {
+              this.setTreeViewTitleUser(this.authentication.username, this.authentication.roles);
+            }
+            else {
+              this.setTreeViewTitleUser();
+            }
+          }
+        }
+      });
+    }
+  }
+
+  async enableAuth() {
+    await this.client.auth.authEnable().then(async (resp: any) => {
+      console.log(resp);
+    }).catch(async (err: any) => {
+      if (err && err.message) {
+        //'9 FAILED_PRECONDITION: etcdserver: root user does not exist'
+        if (err.message.includes("FAILED_PRECONDITION") && err.message.includes("root user does not exist")) {
+          console.log("Creating root user.");
+          var pwdBox = vscode.window.createInputBox();
+          pwdBox.title = "Creating root user, please provide password for root user";
+          pwdBox.password = true;
+          pwdBox.onDidAccept(async () => {
+            //pwdBox.hide();
+            const rootUser = await this.client.user('root').create(pwdBox.value);
+            await this.client.role('root').create();
+            await rootUser.addRole('root');
+            this.client.auth.authEnable().then(async (resp: any) => {
+              console.log(resp);
+            }).catch(async (err: any) => {
+              await vscode.window.showErrorMessage(err.message);
+            }).finally(() => { pwdBox.dispose(); });
+          });
+          pwdBox.show();
+        }
+        else {
+          await vscode.window.showErrorMessage(err.message);
+        }
+      }
+    }).finally(async () => {
+      await this.isAuthEnabled();
+      if (this.etcd_host) {
+        this.refreshView(this.etcd_host);
+      }
+    });
+  }
+
+  async disableAuth() {
+    await this.client.auth.authDisable().then(async (resp: any) => {
+      console.log("Auth is disabled");
+      this.authEnabled = false;
+      this.logout();
+    });
+  }
+
+  async loginas(user: string, pwd: string) {
+    if (!this.etcd_host) return;
+    if (this.client) this.client.close();
+    var options: any;
+    if (this._etcd3_options) {
+      options = {
+        hosts: this._etcd3_options.hosts,
+        grpcOptions: this._etcd3_options.grpcOptions,
+        auth: {
+          username: user,
+          password: pwd
+        }
+      }
+      if (this.protocol == "https:") {
+        options = {
+          hosts: this._etcd3_options.hosts,
+          grpcOptions: this._etcd3_options.grpcOptions,
+          credentials: this._etcd3_options.credentials,
+          auth: {
+            username: user,
+            password: pwd
+          }
+        }
+      }
+    }
+    this.client = new Etcd3(options);
+    if (!this.client) return;
+    var roles: string[] = [];
+
+    this.client.user(user).roles().then(async (res: any) => {
+      if (res) {
+        vscode.commands.executeCommand('setContext', 'etcd3.basicauth', true);
+        for (var element of res) {
+          roles.push(element.name);
+          if (element.name == "root") {
+            vscode.commands.executeCommand('setContext', 'etcd3.basicauthroot', true);
+          }
+        }
+        this.setTreeViewTitleUser(user, roles);
+        this.authentication = {};
+        this.authentication.username = user;
+        this.authentication.password = pwd;
+        this.authentication.roles = roles;
+        if (this.etcd_host) {
+          this.refreshView(this.etcd_host);
+        }
+      }
+    }).catch((err: any) => {
+      console.log(err);
+    });
   }
 
   getTreeItem(element: EtcdNode): vscode.TreeItem {
@@ -68,6 +275,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
   }
 
   async initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
+    if (!this.isVisible) return;
     if (this.client === undefined) return;
     var prefix = node.prefix;
     var removePrefixFromKeys = (ignoreParentKeys != undefined) ? ignoreParentKeys : true;
@@ -153,7 +361,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
       self.refresh();
     }, (error: string) => {
       console.log(error);
-      vscode.window.showErrorMessage(error.toString());
+      vscode.window.showErrorMessage("ETCD3: (prefix: " + prefix + " ) " + error.toString());
       nodeList.updated();
       self.refresh();
     });
@@ -196,5 +404,12 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
       });
     })
     return p;
+  }
+
+  resetContextValues() {
+    vscode.commands.executeCommand('setContext', 'etcd3.basicauth_enabled', false);
+    vscode.commands.executeCommand('setContext', 'etcdcluster.tlsauth', false);
+    vscode.commands.executeCommand('setContext', 'etcd3.basicauth', false);
+    vscode.commands.executeCommand('setContext', 'etcd3.basicauthroot', false);
   }
 }

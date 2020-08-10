@@ -1,0 +1,12 @@
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = etcd21
+DNS.2 = etcd22
+DNS.3 = etcd23
+DNS.4 = localhost
+IP.1 = 192.168.86.163
+IP.2 = 127.0.0.1

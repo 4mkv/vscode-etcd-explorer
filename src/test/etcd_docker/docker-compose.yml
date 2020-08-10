@@ -1,0 +1,315 @@
+version: "3.8"
+networks:
+  etcd1:
+  etcd2:
+  etcd3:
+# x-disabled1:
+services:
+  etcd11:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23791:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd11
+      - --advertise-client-urls
+      - http://192.168.86.171:23791
+      - --listen-client-urls
+      - http://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd11:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-1
+      - --initial-cluster
+      - etcd11=http://etcd11:2380,etcd12=http://etcd12:2380,etcd13=http://etcd13:2380
+      - --initial-cluster-state
+      - new
+    networks:
+      etcd1:
+        aliases:
+          - etcd11
+  etcd12:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23792:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd12
+      - --advertise-client-urls
+      - http://192.168.86.171:23792
+      - --listen-client-urls
+      - http://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd12:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-1
+      - --initial-cluster
+      - etcd11=http://etcd11:2380,etcd12=http://etcd12:2380,etcd13=http://etcd13:2380
+      - --initial-cluster-state
+      - new
+    networks:
+      etcd1:
+        aliases:
+          - etcd12
+  etcd13:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23793:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd13
+      - --advertise-client-urls
+      - http://192.168.86.171:23793
+      - --listen-client-urls
+      - http://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd13:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-1
+      - --initial-cluster
+      - etcd11=http://etcd11:2380,etcd12=http://etcd12:2380,etcd13=http://etcd13:2380
+      - --initial-cluster-state
+      - new
+    networks:
+      etcd1:
+        aliases:
+          - etcd13
+  # x-disabled2:
+  etcd21:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23794:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd21
+      - --advertise-client-urls
+      - https://192.168.86.171:23794
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd21:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-2
+      - --initial-cluster
+      - etcd21=http://etcd21:2380,etcd22=http://etcd22:2380,etcd23=http://etcd23:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+    networks:
+      etcd2:
+        aliases:
+          - etcd21
+  etcd22:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23795:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd22
+      - --advertise-client-urls
+      - https://192.168.86.171:23795
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd22:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-2
+      - --initial-cluster
+      - etcd21=http://etcd21:2380,etcd22=http://etcd22:2380,etcd23=http://etcd23:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+    networks:
+      etcd2:
+        aliases:
+          - etcd22
+  etcd23:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23796:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd23
+      - --advertise-client-urls
+      - https://192.168.86.171:23796
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd23:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-2
+      - --initial-cluster
+      - etcd21=http://etcd21:2380,etcd22=http://etcd22:2380,etcd23=http://etcd23:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+    networks:
+      etcd2:
+        aliases:
+          - etcd23
+  # x-disabled3:
+  etcd31:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23797:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd31
+      - --advertise-client-urls
+      - https://192.168.86.171:23797
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd31:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-3
+      - --initial-cluster
+      - etcd31=http://etcd31:2380,etcd32=http://etcd32:2380,etcd33=http://etcd33:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+      - --client-cert-auth
+      - --trusted-ca-file=/certs/ca.crt
+    networks:
+      etcd3:
+        aliases:
+          - etcd31
+  etcd32:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23798:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd32
+      - --advertise-client-urls
+      - https://192.168.86.171:23798
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd32:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-3
+      - --initial-cluster
+      - etcd31=http://etcd31:2380,etcd32=http://etcd32:2380,etcd33=http://etcd33:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+      - --client-cert-auth
+      - --trusted-ca-file=/certs/ca.crt
+    networks:
+      etcd3:
+        aliases:
+          - etcd32
+  etcd33:
+    image: quay.io/coreos/etcd:v3.4.10
+    ports:
+      - 23799:2379
+    expose:
+      - 2379
+      - 2380
+    volumes:
+      - "./certs:/certs"
+    command:
+      - etcd
+      - --enable-v2
+      - --name
+      - etcd33
+      - --advertise-client-urls
+      - https://192.168.86.171:23799
+      - --listen-client-urls
+      - https://0.0.0.0:2379
+      - --initial-advertise-peer-urls
+      - http://etcd33:2380
+      - --listen-peer-urls
+      - http://0.0.0.0:2380
+      - --initial-cluster-token
+      - etcd-cluster-3
+      - --initial-cluster
+      - etcd31=http://etcd31:2380,etcd32=http://etcd32:2380,etcd33=http://etcd33:2380
+      - --initial-cluster-state
+      - new
+      - --cert-file=/certs/server.crt
+      - --key-file=/certs/server.key
+      - --client-cert-auth
+      - --trusted-ca-file=/certs/ca.crt
+    networks:
+      etcd3:
+        aliases:
+          - etcd33
