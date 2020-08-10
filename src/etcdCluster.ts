@@ -67,12 +67,12 @@ export class EtcdClusters {
     return file;
   }
 
-  async addClientCerts(cluster: EtcdCluster, cert_path?: string) {
+  async addClientCerts(cluster: EtcdCluster, cert_path?: string, key_path?: string) {
     var self = this;
     if (cluster && cluster.label) {
       await this.addCertsOptions(cluster.label, (certOptions: any) => {
         cluster.setOptions(certOptions);
-      }, cert_path);
+      }, cert_path, key_path);
       let promise = self.getVersionInfo(cluster.label, cluster.options);
       await promise.then((versionInfo: any) => {
         cluster.setContextValue(versionInfo.clusterContext);
@@ -86,7 +86,7 @@ export class EtcdClusters {
     }
   }
 
-  async addCertsOptions(hostString: string, setOptions: any, cert_path?: string) {
+  async addCertsOptions(hostString: string, setOptions: any, cert_path?: string, key_path?: string) {
     var hostString: string;
     var self = this;
     var options = {
@@ -103,28 +103,42 @@ export class EtcdClusters {
     if (protocol.toLowerCase() != "https:") {
       vscode.window.showErrorMessage("The server endpoint protocol must be https");
     }
-    if (!cert_path) {
+    if (!cert_path || !key_path) {
       await vscode.window.showOpenDialog({
-        openLabel: "Select Certificates Path for " + hostString,
-        canSelectFiles: false,
-        canSelectFolders: true,
+        openLabel: "Select Client Certificate for " + hostString,
+        canSelectFiles: true,
+        canSelectFolders: false,
         canSelectMany: false,
-        //filters: { "CA Certificate File": ["pem", "crt"] }
+        //filters: { "Certificate Files": ["pem"] }
+        filters: { "Certificate File": ["pem", "crt"] }
       }).then(async (certsPath) => {
         if (certsPath) {
-          cert_path = certsPath[0].path;
+          cert_path = certsPath[0].fsPath;
+          await vscode.window.showOpenDialog({
+            openLabel: "Select Client Key for " + hostString,
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            //filters: { "Certificate Files": ["pem"] }
+            filters: { "Certificate File": ["pem", "key"] }
+          }).then(async (keyPath) => {
+            if (keyPath) {
+              key_path = keyPath[0].fsPath;
+            }
+          }, async () => { });
         }
       }, async () => { });
     }
-    if (cert_path) {
-      this.context.globalState.update(hostString + "_certs_path", cert_path);
+    if (cert_path && key_path) {
+      this.context.globalState.update(hostString + "_cert_path", cert_path);
+      this.context.globalState.update(hostString + "_key_path", key_path);
       //options.ca = fs.readFileSync(self.get_cert_file_path(cert_path, "ca", false));
       var conf = vscode.workspace.getConfiguration('etcd-explorer');
       if (conf.root_ca_path) {
         options.ca = fs.readFileSync(conf.root_ca_path);
       }
-      options.cert = fs.readFileSync(self.get_cert_file_path(cert_path, "client", false));
-      options.key = fs.readFileSync(self.get_cert_file_path(cert_path, "client", true));
+      options.cert = fs.readFileSync(cert_path);
+      options.key = fs.readFileSync(key_path);
     }
     if (options.key.length > 0) {
       await EtcdCerts.hasPassPhrase(options.key, async (hasPP: boolean) => {
@@ -184,6 +198,12 @@ export class EtcdClusters {
             var conf = vscode.workspace.getConfiguration('etcd-explorer');
             if (conf.root_ca_path) {
               options.ca = fs.readFileSync(conf.root_ca_path);
+            }
+            var cert_path = this.context.globalState.get(hostString + "_cert_path");
+            var key_path = this.context.globalState.get(hostString + "_key_path");
+            if (cert_path && key_path) {
+              options.cert = fs.readFileSync(cert_path);
+              options.key = fs.readFileSync(key_path);
             }
           }
           let promise = self.getVersionInfo(hostString, options);
@@ -348,7 +368,8 @@ export class EtcdClusters {
         }
         context_hosts = Array.from(hostSet);
         this.context.globalState.update("etcd_hosts", context_hosts);
-        this.context.globalState.update(clusterLabel + "_certs_path", undefined);
+        this.context.globalState.update(clusterLabel + "_cert_path", undefined);
+        this.context.globalState.update(clusterLabel + "_key_path", undefined);
 
         if (self.currentCluster && self.currentCluster.label == clusterLabel) {
           self.currentCluster = undefined;
