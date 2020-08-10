@@ -2,6 +2,9 @@
 
 All notable changes to the "etcd-viewer" extension will be documented in this file.
 
+## Etcd Explorer 0.4.0
+- Security and authentication features added for secure servers
+
 ## Etcd Explorer 0.3.4
 - Better handling of array data while importing json
 - Better handling of etcd3 data
