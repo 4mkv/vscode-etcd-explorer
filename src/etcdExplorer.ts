@@ -295,7 +295,7 @@ export class EtcdExplorerBase {
         }
         if (!isLeaf) {  /*json key is not leaf but dir*/
           if (existingNode && existingNode.isLeafNode()) { /* existing node is not dir but leaf*/
-            // this is allowed in etcd3 but not in etcd2 
+            // this is allowed in etcd3 but not in etcd2
             // etcd3 can have cases like: /a/b = c && /a = e
             if (this.schema().startsWith('etcd2')) {
               conflicts.push({ key: currentKey, value: value, srcLeaf: isLeaf, dstLeaf: existingNode.isLeafNode() });
@@ -465,7 +465,7 @@ export class EtcdExplorerBase {
 
   async jsonToLevelNodeList(jsonObj: JSON, node: EtcdNode, explorer: EtcdExplorerBase) {
 
-    // use stack to iterate DFS 
+    // use stack to iterate DFS
     var stack = Array<{ json: JSON, node: EtcdNode }>();
     stack.push({ json: jsonObj, node: node });
     var staleMap = new HashMap();
@@ -594,7 +594,7 @@ export class EtcdExplorerBase {
       return;
     }
     node.updateValue().then(async (value: any) => {
-      //let doc = await vscode.workspace.openTextDocument({ content: value, language: "json" }); // calls back into the provider 
+      //let doc = await vscode.workspace.openTextDocument({ content: value, language: "json" }); // calls back into the provider
       //var token = require('crypto').randomBytes(48).toString('hex');
       //token = token.toString('base64').replace(/\//g, '_').replace(/:/g, '-');
       //let uri = vscode.Uri.parse(this.schema() + ":" + token + "//" + prefix);
@@ -607,7 +607,7 @@ export class EtcdExplorerBase {
   }
 
   async deleteKeys(prefix: string) {
-    return new Promise((resolve, reject) => { resolve(); });
+    return new Promise((resolve, reject) => { resolve({}); });
   }
 
   async initAllData(node: EtcdNode, callback: Function, ignoreParentKeys?: boolean, recursive?: boolean) {
@@ -634,7 +634,7 @@ export class EtcdExplorerBase {
               let jsonObj = JSON.parse(rawdata);
               await self.jsonToEtcd(jsonObj, token);
               self.refreshData();
-              resolve();
+              resolve({});
             });
           });
         }
@@ -733,7 +733,7 @@ export class EtcdExplorerBase {
         progress.report({ message: "loading data for " + node.label + " ..." });
         var count = 0;
         self.initAllData(node, this.jsonToTextDocument, false, true);
-        resolve();
+        resolve({});
       });
     });
   }

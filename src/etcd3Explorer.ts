@@ -248,7 +248,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
           else {
             console.log(prefix + " all deleted. " + " [" + this.schema() + "]");
             console.log(deleteResponse);
-            resolve();
+            resolve({});
           }
         }).catch((reason: string) => {
           console.log(reason + " [" + this.schema() + "]");
@@ -264,7 +264,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
           else {
             console.log(prefix + " deleted." + " [" + this.schema() + "]");
             console.log(deleteResponse);
-            resolve();
+            resolve({});
           }
         }).catch((reason: string) => {
           console.log(reason + " [" + this.schema() + "]");
@@ -397,7 +397,7 @@ export class Etcd3Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
     var p = new Promise((resolve, reject) => {
       this.client.put(key).value(value).then(() => {
         console.log("Written key " + key + " [" + this.schema() + "]");
-        resolve();
+        resolve({});
       }).catch((reason: string) => {
         console.log("Error: writing key (" + key + ") " + reason + " [" + this.schema() + "]");
         reject(reason);
