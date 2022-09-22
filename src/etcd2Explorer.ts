@@ -111,7 +111,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
           /*          var options = (this.host_options) ? this.host_options : {};
                     this.client.raw("PUT", "/v2/auth/users/root", dataString, options, (err: any, val: any, headers: any) => {
                       console.log(val);
-          
+
                     });
           */
           var headers = {
@@ -234,7 +234,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
                   }
                   else {
                     console.log(prefix + " deleted" + " [" + this.schema() + "]");
-                    resolve();
+                    resolve({});
                   }
                 });
               }
@@ -244,7 +244,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
             }
             else {
               console.log(prefix + " deleted" + " [" + this.schema() + "]");
-              resolve();
+              resolve({});
             }
           });
         }
@@ -252,7 +252,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
           reject("etcd client is not ready.");
         }
       }
-      catch (err) {
+      catch (err: any) {
         reject(err.message);
       }
     });
@@ -377,7 +377,7 @@ export class Etcd2Explorer extends EtcdExplorerBase implements vscode.TreeDataPr
         }
         else {
           console.log("Written key " + key + " [" + this.schema() + "]");
-          resolve();
+          resolve({});
         }
       });
     });

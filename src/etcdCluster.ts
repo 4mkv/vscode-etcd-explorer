@@ -165,7 +165,7 @@ export class EtcdClusters {
     else {
       promise = new Promise((resolve) => {
         var inputBox = vscode.window.createInputBox();
-        inputBox.title = "Etcd Cluster (Protocol(http/https)://Host:Port): ";
+        inputBox.title = "Etcd Cluster (Protocol(HTTP/HTTPS)://host:port): ";
         inputBox.prompt = "e.g. https://locathost:2379 or http://xxx.xxx.xxx.xxx:2379";
         inputBox.onDidAccept(() => {
           resolve(inputBox.value);
@@ -253,42 +253,35 @@ export class EtcdClusters {
     if (err.errors && err.errors.length > 0 && err.errors[0].httperror) {
       errmsg = err.errors[0].httperror.message;
     }
-    vscode.window.showErrorMessage("Error while adding host: " +
-      hostString +
-      " (" + errmsg +
-      "). Do you wish to keep this cluster in context for later?",
-      { modal: true },
-      "Keep",
-      "Forget"
-    ).then((action) => {
-      if (action == "Keep") {
-        var context_hosts: Array<string> | undefined;
-        var hostSet: Set<string>;
-        context_hosts = this.context.globalState.get("etcd_hosts");
-        if (!context_hosts || context_hosts.length == 0) {
-          hostSet = new Set<string>();
-        }
-        else {
-          hostSet = new Set<string>(context_hosts);
-        }
-        context_hosts = Array.from(hostSet.add(hostString));
-        this.context.globalState.update("etcd_hosts", context_hosts);
-        self.refresh();
-      }
-      else {
-        var context_hosts: Array<string> | undefined;
-        context_hosts = this.context.globalState.get("etcd_hosts");
-        var hostSet = new Set<string>(context_hosts);
-        if (context_hosts) {
-          if (protocol.toLowerCase() != "https:") {
-            hostSet.delete(host);
+    vscode.window.showErrorMessage(`Error while adding host: ${hostString} (${errmsg}). Do you wish to keep this cluster in context for later?`,
+      { modal: true }, "Keep", "Forget").then((action) => {
+        if (action == "Keep") {
+          var context_hosts: Array<string> | undefined;
+          var hostSet: Set<string>;
+          context_hosts = this.context.globalState.get("etcd_hosts");
+          if (!context_hosts || context_hosts.length == 0) {
+            hostSet = new Set<string>();
           }
-          hostSet.delete(hostString);
+          else {
+            hostSet = new Set<string>(context_hosts);
+          }
+          context_hosts = Array.from(hostSet.add(hostString));
+          this.context.globalState.update("etcd_hosts", context_hosts);
+          self.refresh();
+        } else {
+          var context_hosts: Array<string> | undefined;
+          context_hosts = this.context.globalState.get("etcd_hosts");
+          var hostSet = new Set<string>(context_hosts);
+          if (context_hosts) {
+            if (protocol.toLowerCase() != "https:") {
+              hostSet.delete(host);
+            }
+            hostSet.delete(hostString);
+          }
+          context_hosts = Array.from(hostSet);
+          this.context.globalState.update("etcd_hosts", context_hosts);
         }
-        context_hosts = Array.from(hostSet);
-        this.context.globalState.update("etcd_hosts", context_hosts);
-      }
-    });
+      });
   }
 
   async getVersionInfo(hostString: string, options: any) {
@@ -430,7 +423,7 @@ export class EtcdClusters {
   }
 
   async copyName(resource: vscode.TreeItem) {
-    if ((resource != undefined) && (resource.label != undefined))
+    if ((resource != undefined) && (resource.label != undefined && 'string' === typeof resource.label))
       vscode.env.clipboard.writeText(resource.label);
     return;
   }
@@ -551,7 +544,7 @@ export class EtcdCluster extends vscode.TreeItem implements EtcdClusterViewItem 
       let timerId = setInterval(() => {
         if (selfStatsDone) {
           clearInterval(timerId);
-          resolve();
+          resolve({});
         }
       }, 100);
     });
@@ -588,7 +581,7 @@ export class EtcdCluster extends vscode.TreeItem implements EtcdClusterViewItem 
       let timerId = setInterval(() => {
         if (!initializing) {
           clearInterval(timerId);
-          resolve();
+          resolve({});
         }
       }, 100);
     });
@@ -639,6 +632,7 @@ export class EtcdUpdatingMemberNode extends EtcdClusterMember {
     super("Updating", root);
   }
   iconPath = {
+    id: "etcd-icon",
     light: path.join(__filename, '..', '..', 'resources', 'loading.gif'),
     dark: path.join(__filename, '..', '..', 'resources', 'loading.gif')
   };
